@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Modal, Form, Row, Col, Button, Alert, Spinner 
 } from 'react-bootstrap';
-import { editarFechaCuota } from '../Helpers/editarFechaCuota';
+import { editarFechaCuota } from '../Helpers/EditarFechaCuota';
 
 export const ModalEditarFechaCuota = ({ 
   show, 

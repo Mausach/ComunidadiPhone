@@ -1,5 +1,5 @@
 // Cobranza/Helpers/cambiarEstadoCuota.js
-import authApi from "../../../api/authApi";
+import authApi from "../../../Api/authApi";
 
 export const cambiarEstadoCuota = async ({ idVenta, numeroCuota, nuevoEstado, usuario, motivo }) => {
   try {

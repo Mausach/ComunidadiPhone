@@ -1,5 +1,5 @@
 // Dev/Helpers/changeEstadoUsuario.js
-import authApi from "../../../Api/AuthApi";
+import authApi from "../../../Api/authApi";
 
 export const changeEstadoUsuario = async (user, setRefreshData, navigate) => {
   try {

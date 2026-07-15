@@ -1,5 +1,5 @@
 // Dev/Helpers/crearUsuario.js
-import authApi from "../../../api/authApi";
+import authApi from "../../../Api/authApi";
 
 export const crearUsuario = async (userData, setRefreshData, navigate) => {
   try {

@@ -1,5 +1,5 @@
 // Cobranza/Helpers/obtenerDetalleVenta.js
-import authApi from "../../../api/authApi";
+import authApi from "../../../Api/authApi";
 
 export const obtenerDetalleVenta = async (id) => {
   try {

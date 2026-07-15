@@ -1,5 +1,5 @@
 // Ventas/Helpers/verificarCliente.js
-import authApi from "../../../api/authApi";
+import authApi from "../../../Api/authApi";
 
 export const crearCliente = async (clienteData, setClienteData, showAlert, esExistente = false) => {
   try {

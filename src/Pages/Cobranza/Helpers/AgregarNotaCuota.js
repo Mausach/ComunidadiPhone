@@ -1,5 +1,7 @@
 // Cobranza/Helpers/agregarNotaCuota.js
-import authApi from "../../../api/authApi";
+
+import authApi from "../../../Api/authApi";
+
 
 export const agregarNotaCuota = async ({ idVenta, numeroCuota, texto, usuario }) => {
   try {

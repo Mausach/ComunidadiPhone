@@ -1,5 +1,5 @@
 // Dev/Helpers/actualizarUsuario.js
-import authApi from "../../../api/authApi";
+import authApi from "../../../Api/authApi";
 
 export const actualizarUsuario = async (userData, setRefreshData, navigate) => {
   try {

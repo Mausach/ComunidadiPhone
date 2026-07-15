@@ -1,5 +1,5 @@
 // Ventas/Helpers/buscarCliente.js
-import authApi from "../../../api/authApi";
+import authApi from "../../../Api/authApi";
 
 export const buscarCliente = async (dni) => {
   try {

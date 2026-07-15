@@ -1,5 +1,5 @@
 // Cobranza/Helpers/cobrarCuotas.js
-import authApi from "../../../api/authApi";
+import authApi from "../../../Api/authApi";
 
 export const cobrarCuotas = async (data) => {
   try {

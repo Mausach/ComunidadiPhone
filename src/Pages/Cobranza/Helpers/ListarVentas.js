@@ -1,5 +1,5 @@
 // Cobranza/Helpers/listarVentas.js
-import authApi from "../../../api/authApi";
+import authApi from "../../../Api/authApi";
 
 // Cobranza/Helpers/listarVentas.js
 

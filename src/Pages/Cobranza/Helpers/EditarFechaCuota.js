@@ -1,5 +1,5 @@
 // Cobranza/Helpers/editarFechaCuota.js
-import authApi from "../../../api/authApi";
+import authApi from "../../../Api/authApi";
 
 export const editarFechaCuota = async ({ idVenta, numeroCuota, nuevaFecha, usuario, motivo }) => {
   try {

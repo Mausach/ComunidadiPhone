@@ -1,5 +1,5 @@
 // Cobranza/Helpers/editarMontoCuota.js
-import authApi from "../../../api/authApi";
+import authApi from "../../../Api/authApi";
 
 export const editarMontoCuota = async ({ idVenta, numeroCuota, nuevoMonto, usuario, motivo }) => {
   try {

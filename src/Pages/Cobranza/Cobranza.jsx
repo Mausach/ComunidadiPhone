@@ -8,7 +8,7 @@ import { BuscadorCobranza } from './Componentes/BuscadorCobranza';
 import { ListaVentas } from './Componentes/ListaVentas';
 import { DetalleVenta } from './Componentes/DetalleVenta';
 import { ModalCobro } from './Componentes/ModalCobro';
-import { listarVentas } from './Helpers/listarVentas';
+import { listarVentas } from './Helpers/ListarVentas';
 
 export const Cobranza = () => {
   const location = useLocation();

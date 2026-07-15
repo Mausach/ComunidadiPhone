@@ -135,7 +135,7 @@ export const ModalCambiarEstadoCuota = ({
         numeroCuota: cuota.numeroCuota,
         nuevoEstado: formData.nuevoEstado,
         usuario: {
-          nombre: usuario?.nombre + ' ' + usuario?.apellido || 'Sistema'
+          nombre: usuario?.user.nombre + ' ' + usuario?.user.apellido || 'Sistema'
         },
         motivo: formData.motivo || 'Sin especificar'
       };

@@ -128,7 +128,7 @@ export const Ventas = () => {
                 clienteData={clienteData}
                 onSubmit={handleVentaSubmit}
                 isLoading={isLoading}
-                vendedor={usuario?.nombre + ' ' + usuario?.apellido}
+                vendedor={usuario?.user.nombre + ' ' + usuario?.user.apellido}
               />
             )}
           </Col>

@@ -1,4 +1,4 @@
-import authApi from "../../../Api/AuthApi";
+import authApi from "../../../Api/authApi";
 
 
 export const starLogin = async (email, password, navigate) => {

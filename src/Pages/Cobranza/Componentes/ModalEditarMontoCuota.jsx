@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Modal, Form, Row, Col, Button, Alert, Spinner 
 } from 'react-bootstrap';
-import { editarMontoCuota } from '../Helpers/editarMontoCuota';
+import { editarMontoCuota } from '../Helpers/EditarMontoCuota';
 
 export const ModalEditarMontoCuota = ({ 
   show, 

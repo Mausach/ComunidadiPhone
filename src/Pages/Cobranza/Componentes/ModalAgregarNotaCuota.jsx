@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Modal, Form, Row, Col, Button, Alert, Spinner, Badge 
 } from 'react-bootstrap';
-import { agregarNotaCuota } from '../Helpers/agregarNotaCuota';
+import { agregarNotaCuota } from '../Helpers/AgregarNotaCuota';
 
 export const ModalAgregarNotaCuota = ({ 
   show, 

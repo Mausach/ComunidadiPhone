@@ -10,6 +10,7 @@ import { Ventas } from '../Ventas/Ventas';
 import { Cobranza } from '../Cobranza/Cobranza';
 import { EquiposCanjeados } from '../Ceo/Componentes/EquiposCanjeados';
 
+
 // Placeholders para lo que falta crear
 const Reportes = () => (
   <div className="p-4">
@@ -17,7 +18,6 @@ const Reportes = () => (
     <p>Sección de reportes - En desarrollo</p>
   </div>
 );
-
 
 const DashboardGerCom = ({ usuario }) => (
   <div className="p-4">
@@ -29,7 +29,7 @@ const DashboardGerCom = ({ usuario }) => (
 export const Ger_Comercial = () => {
   const location = useLocation();
   const usuario = location.state?.user || JSON.parse(localStorage.getItem('user') || '{}');
-  console.log(usuario, +"aqui esta en 37")
+  
   // Estado para controlar qué vista se muestra
   const [vistaActiva, setVistaActiva] = useState('dashboard');
 
@@ -38,7 +38,7 @@ export const Ger_Comercial = () => {
     return <Navigate to="/" replace />;
   }
 
-  // Verificar que el rol sea ger-com
+  // Verificar que el rol sea ger_com
   if (usuario.rol !== 'ger_com') {
     return <Navigate to="/" replace />;
   }
@@ -49,7 +49,7 @@ export const Ger_Comercial = () => {
       case 'dashboard':
         return <DashboardGerCom usuario={usuario} />;
       case 'ventas':
-        return <Ventas />;
+        return <Ventas mostrarNavbar={false} />;
       case 'cobranza':
         return <Cobranza />;
       case 'reportes':

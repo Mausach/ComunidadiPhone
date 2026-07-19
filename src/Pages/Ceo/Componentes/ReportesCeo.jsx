@@ -240,10 +240,9 @@ export const ReportesCeo = () => {
             {/* Badge de resultados */}
             {cuotas.length > 0 && (
               <Col lg={2} md={4} className="d-flex align-items-end">
-                <Badge
+                <Badge bg='dark'
                   style={{
-                    backgroundColor: '#e8f0fe',
-                    color: '#3483FA',
+                    
                     fontSize: '0.85rem',
                     padding: '8px 12px',
                     borderRadius: '6px',

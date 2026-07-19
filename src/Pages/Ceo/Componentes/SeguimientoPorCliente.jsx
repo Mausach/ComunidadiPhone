@@ -69,7 +69,7 @@ export const SeguimientoClientes = ({ cuotas }) => {
     const c = config[estado] || { color: '#666', bg: '#f5f5f5', label: estado, icono: 'bi-question-circle' };
 
     return (
-      <Badge
+      <Badge bg='light'
         style={{
           backgroundColor: c.bg,
           color: c.color,
@@ -272,16 +272,7 @@ export const SeguimientoClientes = ({ cuotas }) => {
                       <i className="bi bi-box me-1"></i>
                       {venta.producto}
                     </div>
-                    <Badge
-                      style={{
-                        backgroundColor: '#f5f5f5',
-                        color: '#666',
-                        fontWeight: '500',
-                        fontSize: '0.7rem',
-                        padding: '2px 8px',
-                        borderRadius: '4px'
-                      }}
-                    >
+                    <Badge bg='dark'>
                       {venta.tipoVenta}
                     </Badge>
                   </Col>

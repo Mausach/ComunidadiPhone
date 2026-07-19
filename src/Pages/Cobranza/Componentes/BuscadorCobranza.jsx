@@ -52,9 +52,35 @@ export const BuscadorCobranza = ({ onBuscar, loading, filtrosIniciales }) => {
     });
   };
 
+  // ==========================================
+  // BOTÓN "HOY" - Filtrar cuotas de hoy
+  // ==========================================
+  const handleFiltrarHoy = () => {
+    const hoy = new Date().toISOString().split('T')[0];
+    
+    const filtrosHoy = {
+      ...filtros,
+      fechaDesde: hoy,
+      fechaHasta: hoy,
+      // Limpiar otros filtros de fecha para que no interfieran
+      fechaVentaDesde: '',
+      fechaVentaHasta: ''
+    };
+    
+    setFiltros(filtrosHoy);
+    
+    // Ejecutar búsqueda automáticamente
+    const filtrosLimpios = {};
+    Object.keys(filtrosHoy).forEach(key => {
+      if (filtrosHoy[key] && String(filtrosHoy[key]).trim() !== '') {
+        filtrosLimpios[key] = filtrosHoy[key];
+      }
+    });
+    onBuscar(filtrosLimpios);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Limpiar campos vacíos antes de enviar
     const filtrosLimpios = {};
     Object.keys(filtros).forEach(key => {
       if (filtros[key] && filtros[key].trim() !== '') {
@@ -84,6 +110,10 @@ export const BuscadorCobranza = ({ onBuscar, loading, filtrosIniciales }) => {
   const filtrosActivos = Object.keys(filtros).filter(key => 
     filtros[key] && filtros[key].trim() !== ''
   ).length;
+
+  // Detectar si el filtro de "Hoy" está activo
+  const hoy = new Date().toISOString().split('T')[0];
+  const esFiltroHoy = filtros.fechaDesde === hoy && filtros.fechaHasta === hoy;
 
   return (
     <div className="border rounded-3 p-3 mb-4" style={{ backgroundColor: '#f8f9fa' }}>
@@ -132,6 +162,28 @@ export const BuscadorCobranza = ({ onBuscar, loading, filtrosIniciales }) => {
 
           {/* Botones de acción */}
           <Col md={6} className="d-flex gap-2 justify-content-end">
+            {/* Botón HOY */}
+            <Button
+              variant={esFiltroHoy ? 'danger' : 'outline-danger'}
+              onClick={handleFiltrarHoy}
+              className="rounded-3 d-flex align-items-center"
+              disabled={loading}
+              style={{ fontWeight: '500' }}
+            >
+              <i className="bi bi-calendar-check me-1"></i>
+              Hoy
+              {esFiltroHoy && (
+                <Badge 
+                  bg="light" 
+                  text="dark" 
+                  className="ms-1 rounded-pill"
+                  style={{ fontSize: '0.65rem' }}
+                >
+                  ✓
+                </Badge>
+              )}
+            </Button>
+
             <Button
               variant="primary"
               type="submit"

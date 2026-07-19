@@ -4,6 +4,8 @@ import React from 'react';
 import { Navbar, Nav, Container, Dropdown } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 
+import logo from '../../../assets/logo_.jpeg';
+
 export const NavBarGC = ({ usuario, vistaActiva, onCambiarVista }) => {
   const navigate = useNavigate();
 
@@ -22,26 +24,32 @@ export const NavBarGC = ({ usuario, vistaActiva, onCambiarVista }) => {
   };
 
   return (
-    <Navbar 
-      bg="white" 
-      expand="lg" 
+    <Navbar
+      bg="white"
+      expand="lg"
       className="shadow-sm border-bottom"
       sticky="top"
     >
       <Container fluid>
-        <Navbar.Brand 
+        <Navbar.Brand
           className="d-flex align-items-center"
           onClick={() => onCambiarVista('dashboard')}
           style={{ cursor: 'pointer' }}
         >
-          <i className="bi bi-shop me-2" style={{ color: '#3483FA', fontSize: '1.5rem' }}></i>
-          <span className="fw-bold" style={{ color: '#333' }}>
-            Gerencia Comercial
+          <img
+            alt="Logo"
+            src={logo}
+            width="75"
+
+            className="d-inline-block align-top"
+          />
+          <span className="fw-bold" style={{ color: '#021C5E' }}>
+            Comunidad iPhone
           </span>
         </Navbar.Brand>
 
         <Navbar.Toggle aria-controls="navbar-gercom" />
-        
+
         <Navbar.Collapse id="navbar-gercom">
           <Nav className="me-auto">
             {opciones.map((opcion, index) => (
@@ -52,8 +60,8 @@ export const NavBarGC = ({ usuario, vistaActiva, onCambiarVista }) => {
                 style={{
                   color: vistaActiva === opcion.vista ? '#3483FA' : '#666',
                   fontWeight: vistaActiva === opcion.vista ? '600' : '400',
-                  borderBottom: vistaActiva === opcion.vista 
-                    ? '2px solid #3483FA' 
+                  borderBottom: vistaActiva === opcion.vista
+                    ? '2px solid #3483FA'
                     : '2px solid transparent',
                   transition: 'all 0.2s ease'
                 }}
@@ -66,18 +74,18 @@ export const NavBarGC = ({ usuario, vistaActiva, onCambiarVista }) => {
 
           <Nav>
             <Dropdown align="end">
-              <Dropdown.Toggle 
-                variant="light" 
+              <Dropdown.Toggle
+                variant="light"
                 id="dropdown-usuario"
                 className="d-flex align-items-center"
                 style={{ border: '1px solid #e5e5e5', borderRadius: '6px' }}
               >
                 <div className="d-flex align-items-center">
-                  <div 
+                  <div
                     className="rounded-circle d-flex align-items-center justify-content-center me-2"
-                    style={{ 
-                      width: '32px', 
-                      height: '32px', 
+                    style={{
+                      width: '32px',
+                      height: '32px',
                       backgroundColor: '#3483FA',
                       color: 'white',
                       fontSize: '0.85rem',
@@ -97,7 +105,7 @@ export const NavBarGC = ({ usuario, vistaActiva, onCambiarVista }) => {
                   {usuario?.email}
                 </Dropdown.Header>
                 <Dropdown.Divider />
-                <Dropdown.Item 
+                <Dropdown.Item
                   onClick={handleLogout}
                   className="d-flex align-items-center"
                   style={{ color: '#dc3545' }}

@@ -14,8 +14,8 @@ export const ItemVenta = ({ venta, onVerDetalle, loading }) => {
     const colores = {
       'al dia': 'success',
       'atrasado': 'danger',
-      'cancelado': 'secondary',
-      'refinanciado': 'info',
+      'cancelado': 'success',
+      'refinanciado': 'warning',
       'cobro judicial': 'dark',
       'caducado': 'secondary'
     };
@@ -254,7 +254,7 @@ export const ItemVenta = ({ venta, onVerDetalle, loading }) => {
                   <div className="d-flex gap-2 flex-wrap mt-1">
                     <small className="text-muted">
                       <i className="bi bi-phone me-1"></i>
-                      {venta.producto?.nombre || 'Sin producto'}
+                      {venta.producto?.nombre +' '+ venta.producto?.modelo || 'Sin producto'}
                     </small>
                     <small className="text-muted">
                       <i className="bi bi-geo-alt me-1"></i>
@@ -330,21 +330,7 @@ export const ItemVenta = ({ venta, onVerDetalle, loading }) => {
                     )}
 
                     {/* Icono de cuotas con popover */}
-                    <OverlayTrigger
-                      trigger="click"
-                      placement="bottom"
-                      rootClose
-                      overlay={renderCuotasPopover}
-                    >
-                      <Badge
-                        bg="secondary"
-                        className="rounded-pill px-2 py-1 d-flex align-items-center gap-1"
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <i className="bi bi-grid"></i>
-                        {cuotas.length || 0}
-                      </Badge>
-                    </OverlayTrigger>
+                  
 
                     {/* Badge de conducta */}
                     <Badge

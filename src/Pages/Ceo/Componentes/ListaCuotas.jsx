@@ -172,14 +172,7 @@ export const ListaCuotas = ({ cuotasAgrupadas, resumen }) => {
                                 </td>
                                 <td>
                                   <Badge
-                                    style={{
-                                      backgroundColor: '#f5f5f5',
-                                      color: '#666',
-                                      fontWeight: '500',
-                                      fontSize: '0.8rem',
-                                      padding: '4px 8px',
-                                      borderRadius: '4px'
-                                    }}
+                                    bg='success'
                                   >
                                     {cuota.metodoPago || '-'}
                                   </Badge>
@@ -193,30 +186,15 @@ export const ListaCuotas = ({ cuotasAgrupadas, resumen }) => {
                             {/* COLUMNA DE NOTAS */}
                             <td>
                               {cuota.notas && cuota.notas.length > 0 ? (
-                                <Badge
+                                <Badge bg='secondary'
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setNotaSeleccionada(cuota);
-                                  }}
+                                  }} 
                                   style={{
-                                    backgroundColor: '#fff3cd',
-                                    color: '#856404',
                                     cursor: 'pointer',
-                                    padding: '5px 10px',
-                                    borderRadius: '4px',
-                                    fontWeight: '500',
-                                    fontSize: '0.8rem',
-                                    border: '1px solid #ffc107',
-                                    transition: 'all 0.2s ease'
                                   }}
-                                  onMouseEnter={(e) => {
-                                    e.target.style.backgroundColor = '#ffc107';
-                                    e.target.style.color = '#000';
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.target.style.backgroundColor = '#fff3cd';
-                                    e.target.style.color = '#856404';
-                                  }}
+                               
                                 >
                                   <i className="bi bi-chat-dots me-1"></i>
                                   {cuota.notas.length} {cuota.notas.length === 1 ? 'nota' : 'notas'}
@@ -285,14 +263,7 @@ export const ListaCuotas = ({ cuotasAgrupadas, resumen }) => {
                   >
                     <div className="d-flex justify-content-between align-items-start mb-2">
                       <Badge
-                        style={{
-                          backgroundColor: '#e8f0fe',
-                          color: '#3483FA',
-                          fontWeight: '500',
-                          padding: '4px 10px',
-                          borderRadius: '4px',
-                          fontSize: '0.8rem'
-                        }}
+                     bg='success'
                       >
                         <i className="bi bi-person me-1"></i>
                         {nota.usuario?.nombre || 'Sistema'}

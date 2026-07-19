@@ -1,5 +1,4 @@
 import { CardLogin } from './Componentes/CardLogin';
-
 // Pages/HomeLogin/HomeLogin.jsx
 
 import React from 'react'
@@ -8,23 +7,24 @@ import Navbar from 'react-bootstrap/Navbar';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 
+import logo from '../../assets/logologin.jpeg'; // Ajustá la ruta según tu estructura
 
 export const HomeLogin = () => {
     return (
         <>
-            <Navbar className="bg-body-tertiary shadow-sm">
+            <Navbar 
+                className="shadow-sm"
+                style={{ backgroundColor: '#0F488B', minHeight: '64px' }}
+            >
                 <Container>
-                    <Navbar.Brand href="#home">
+                    <Navbar.Brand href="#home" className="d-flex align-items-center">
                         <img
-                            alt=""
-                            src="/img/logo.svg"
-                            width="30"
-                            height="30"
+                            alt="Logo"
+                            src={logo}
+                            width="200"
+                            
                             className="d-inline-block align-top"
-                        />{' '}
-                        <span className="fw-bold" style={{ color: '#333' }}>
-                            Comunidad iPhone
-                        </span>
+                        />
                     </Navbar.Brand>
                 </Container>
             </Navbar>

@@ -687,7 +687,7 @@ export const FormularioVenta = ({
                         ========================================== */}
                     {mostrarCuotas && (
                         <div className="border rounded-3 p-3 mb-4" style={{ backgroundColor: '#f8f9fa' }}>
-                            <h6 className="fw-bold text-warning mb-3" style={{ fontSize: '0.85rem' }}>
+                            <h6 className="fw-bold text-danger mb-3" style={{ fontSize: '0.85rem' }}>
                                 <i className="bi bi-calendar-event me-2"></i>
                                 Configuración de Cuotas
                             </h6>
@@ -773,14 +773,7 @@ export const FormularioVenta = ({
                                         <Col xs={12} md={4} className="mt-2 mt-md-0">
                                             <small className="text-muted d-block">Frecuencia</small>
                                             <Badge
-                                                style={{
-                                                    backgroundColor: '#e8f0fe',
-                                                    color: '#3483FA',
-                                                    fontWeight: '500',
-                                                    padding: '4px 10px',
-                                                    borderRadius: '4px',
-                                                    fontSize: '0.85rem'
-                                                }}
+                                             
                                             >
                                                 <i className="bi bi-arrow-repeat me-1"></i>
                                                 {frecuenciaSeleccionada?.label}
@@ -1024,7 +1017,7 @@ export const FormularioVenta = ({
                     {mostrarGarante && (
                         <div className="border rounded-3 p-3 mb-4" style={{ backgroundColor: '#f8f9fa' }}>
                             <div className="d-flex justify-content-between align-items-center mb-3">
-                                <h6 className="fw-bold text-warning mb-0" style={{ fontSize: '0.85rem' }}>
+                                <h6 className="fw-bold text-primary mb-0" style={{ fontSize: '0.85rem' }}>
                                     <i className="bi bi-person-check me-2"></i>
                                     Garante
                                 </h6>
@@ -1314,16 +1307,7 @@ export const FormularioVenta = ({
                                     <Col md={4}>
                                         <div className="p-2 bg-white rounded-3">
                                             <small className="text-muted d-block">Frecuencia</small>
-                                            <Badge
-                                                style={{
-                                                    backgroundColor: '#e8f0fe',
-                                                    color: '#3483FA',
-                                                    fontWeight: '500',
-                                                    padding: '4px 10px',
-                                                    borderRadius: '4px',
-                                                    fontSize: '0.8rem'
-                                                }}
-                                            >
+                                            <Badge bg="dark">
                                                 <i className="bi bi-arrow-repeat me-1"></i>
                                                 {frecuenciaSeleccionada?.label}
                                             </Badge>

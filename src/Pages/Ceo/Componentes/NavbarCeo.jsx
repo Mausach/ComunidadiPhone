@@ -3,17 +3,18 @@
 import React from 'react';
 import { Navbar, Nav, Container, Dropdown } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
+import logo from '../../../assets/logo_.jpeg';
 
 export const NavBarCeo = ({ usuario, vistaActiva, onCambiarVista }) => {
   const navigate = useNavigate();
 
-const opciones = [
-  { label: 'Dashboard', icon: 'bi-speedometer2', vista: 'dashboard' },
-  { label: 'Reportes', icon: 'bi-graph-up-arrow', vista: 'reportes' },
-  { label: 'Historial', icon: 'bi-clock-history', vista: 'historial-cuotas' },
-  { label: 'Eq. Canje', icon: 'bi-arrow-left-right', vista: 'equipos-canjeados' },
- 
-];
+  const opciones = [
+    { label: 'Dashboard', icon: 'bi-speedometer2', vista: 'dashboard' },
+    { label: 'Reportes', icon: 'bi-graph-up-arrow', vista: 'reportes' },
+    { label: 'Historial', icon: 'bi-clock-history', vista: 'historial-cuotas' },
+    { label: 'Eq. Canje', icon: 'bi-arrow-left-right', vista: 'equipos-canjeados' },
+
+  ];
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -22,39 +23,33 @@ const opciones = [
   };
 
   return (
-    <Navbar 
-      bg="white" 
-      expand="lg" 
+    <Navbar
+      bg="white"
+      expand="lg"
       className="shadow-sm border-bottom"
       sticky="top"
       style={{ backgroundColor: '#fff' }}
     >
       <Container fluid>
-        <Navbar.Brand 
+        <Navbar.Brand
           className="d-flex align-items-center"
           onClick={() => onCambiarVista('dashboard')}
           style={{ cursor: 'pointer' }}
         >
-          <div 
-            className="d-flex align-items-center justify-content-center me-2"
-            style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '8px',
-              background: 'linear-gradient(135deg, #1a1a1a 0%, #333 100%)',
-              color: 'white',
-              fontSize: '1.2rem'
-            }}
-          >
-            <i className="bi bi-building"></i>
-          </div>
-          <span className="fw-bold" style={{ color: '#1a1a1a', fontSize: '1.1rem' }}>
-            CEO Panel
+          <img
+            alt="Logo"
+            src={logo}
+            width="50"
+
+            className="d-inline-block align-top"
+          />
+          <span className="fw-bold" style={{ color: '#0F488B', fontSize: '1.1rem' }}>
+            Comunidad iPhone
           </span>
         </Navbar.Brand>
 
         <Navbar.Toggle aria-controls="navbar-ceo" />
-        
+
         <Navbar.Collapse id="navbar-ceo">
           <Nav className="me-auto ms-3">
             {opciones.map((opcion, index) => (
@@ -65,8 +60,8 @@ const opciones = [
                 style={{
                   color: vistaActiva === opcion.vista ? '#1a1a1a' : '#666',
                   fontWeight: vistaActiva === opcion.vista ? '600' : '400',
-                  borderBottom: vistaActiva === opcion.vista 
-                    ? '3px solid #1a1a1a' 
+                  borderBottom: vistaActiva === opcion.vista
+                    ? '3px solid #1a1a1a'
                     : '3px solid transparent',
                   transition: 'all 0.2s ease',
                   borderRadius: '4px 4px 0 0',
@@ -94,22 +89,22 @@ const opciones = [
 
           <Nav className="align-items-center">
             <Dropdown align="end">
-              <Dropdown.Toggle 
-                variant="light" 
+              <Dropdown.Toggle
+                variant="light"
                 id="dropdown-usuario"
                 className="d-flex align-items-center px-3 py-2"
-                style={{ 
-                  border: '1px solid #e5e5e5', 
+                style={{
+                  border: '1px solid #e5e5e5',
                   borderRadius: '8px',
                   backgroundColor: '#fff'
                 }}
               >
                 <div className="d-flex align-items-center">
-                  <div 
+                  <div
                     className="rounded-circle d-flex align-items-center justify-content-center me-2"
-                    style={{ 
-                      width: '34px', 
-                      height: '34px', 
+                    style={{
+                      width: '34px',
+                      height: '34px',
                       background: 'linear-gradient(135deg, #1a1a1a 0%, #333 100%)',
                       color: 'white',
                       fontSize: '0.85rem',
@@ -130,7 +125,7 @@ const opciones = [
                 </div>
               </Dropdown.Toggle>
 
-              <Dropdown.Menu 
+              <Dropdown.Menu
                 className="shadow-sm border-0 mt-2"
                 style={{ borderRadius: '8px', minWidth: '220px' }}
               >
@@ -146,7 +141,7 @@ const opciones = [
                   </div>
                 </div>
                 <Dropdown.Divider />
-                <Dropdown.Item 
+                <Dropdown.Item
                   onClick={() => navigate('/pass-config')}
                   className="d-flex align-items-center py-2"
                 >
@@ -154,7 +149,7 @@ const opciones = [
                   Cambiar Contraseña
                 </Dropdown.Item>
                 <Dropdown.Divider />
-                <Dropdown.Item 
+                <Dropdown.Item
                   onClick={handleLogout}
                   className="d-flex align-items-center py-2"
                   style={{ color: '#dc3545' }}

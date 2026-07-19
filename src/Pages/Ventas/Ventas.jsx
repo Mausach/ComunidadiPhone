@@ -1,7 +1,7 @@
 // Ventas/index.jsx
 import React, { useState } from 'react';
-import { Container, Row, Col } from 'react-bootstrap';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Container, Row, Col, Card, Button, Badge } from 'react-bootstrap';
+import { useLocation } from 'react-router-dom';
 
 import { NavBarVentas } from './Componentes/NavBarVentas';
 import { FormularioCliente } from './Componentes/FormularioCliente';
@@ -10,17 +10,16 @@ import { crearCliente } from './Helpers/AltaCliente';
 import { FormularioVenta } from './Componentes/FormularioVenta';
 import { crearVenta } from './Helpers/AltaVenta';
 
-// Ventas/index.jsx
 
-export const Ventas = () => {
+export const Ventas = ({ mostrarNavbar = true }) => {
   const location = useLocation();
   const usuario = location.state;
-  const navigate = useNavigate();
 
   const [isLoading, setIsLoading] = useState(false);
   const [clienteData, setClienteData] = useState(null);
   const [clienteId, setClienteId] = useState(null);
   const [pasoActual, setPasoActual] = useState(1);
+  const [ventaCreada, setVentaCreada] = useState(null);
   const [alert, setAlert] = useState({
     show: false,
     message: '',
@@ -78,16 +77,12 @@ export const Ventas = () => {
       const result = await crearVenta(ventaData);
       console.log('✅ Venta creada:', result);
 
-      showAlert('¡Venta creada exitosamente!', 'success');
+      setVentaCreada(result.data);
 
       setTimeout(() => {
         setIsLoading(false);
-        navigate('/ventas', {
-          state: {
-            venta: result.data,
-            cliente: clienteData
-          }
-        });
+        setPasoActual(3); // Nuevo paso: resumen
+        showAlert('¡Venta creada exitosamente!', 'success');
       }, 1500);
 
     } catch (error) {
@@ -97,9 +92,31 @@ export const Ventas = () => {
     }
   };
 
+  const handleNuevaVenta = () => {
+    setPasoActual(1);
+    setClienteData(null);
+    setClienteId(null);
+    setVentaCreada(null);
+    setAlert({ show: false, message: '', variant: 'danger' });
+  };
+
+  const formatMonto = (monto) => {
+    if (!monto) return '$0';
+    return `$${monto.toLocaleString('es-AR')}`;
+  };
+
+  const formatFecha = (fecha) => {
+    if (!fecha) return '-';
+    return new Date(fecha).toLocaleDateString('es-AR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  };
+
   return (
     <div>
-      <NavBarVentas usuario={usuario} />
+      {mostrarNavbar && <NavBarVentas usuario={usuario} />}
 
       <Container fluid className="py-4">
         <Row className="justify-content-center">
@@ -110,7 +127,9 @@ export const Ventas = () => {
                 Nueva Venta
               </h2>
               <p className="text-muted small">
-                {pasoActual === 1 ? 'Paso 1: Registrá los datos del cliente' : 'Paso 2: Completá los datos de la venta'}
+                {pasoActual === 1 && 'Paso 1: Registrá los datos del cliente'}
+                {pasoActual === 2 && 'Paso 2: Completá los datos de la venta'}
+                {pasoActual === 3 && '✅ Venta completada'}
               </p>
             </div>
 
@@ -128,8 +147,88 @@ export const Ventas = () => {
                 clienteData={clienteData}
                 onSubmit={handleVentaSubmit}
                 isLoading={isLoading}
-                vendedor={usuario?.user.nombre + ' ' + usuario?.user.apellido}
+                vendedor={usuario?.user?.nombre + ' ' + usuario?.user?.apellido}
               />
+            )}
+
+            {pasoActual === 3 && ventaCreada && (
+              <Card className="border-0 shadow-sm" style={{ borderRadius: '16px' }}>
+                <Card.Body className="p-4 p-md-5 text-center">
+                  <div className="mb-4">
+                    <div 
+                      className="d-inline-flex align-items-center justify-content-center mb-3"
+                      style={{
+                        width: '72px',
+                        height: '72px',
+                        borderRadius: '50%',
+                        backgroundColor: '#e6f7ee',
+                        color: '#00a650',
+                        fontSize: '2rem'
+                      }}
+                    >
+                      <i className="bi bi-check-circle-fill"></i>
+                    </div>
+                    <h4 className="fw-bold" style={{ color: '#1a1a1a' }}>
+                      ¡Venta Creada Exitosamente!
+                    </h4>
+                    <p className="text-muted">
+                      Los datos de la venta se guardaron correctamente.
+                    </p>
+                  </div>
+
+                  <div className="bg-light rounded-3 p-3 mb-4">
+                    <Row className="g-3 text-start">
+                      <Col md={6}>
+                        <small className="text-muted d-block">Cliente</small>
+                        <span className="fw-semibold">
+                          {ventaCreada.cliente?.apellido}, {ventaCreada.cliente?.nombre}
+                        </span>
+                      </Col>
+                      <Col md={6}>
+                        <small className="text-muted d-block">DNI</small>
+                        <span className="fw-semibold">{ventaCreada.cliente?.dni}</span>
+                      </Col>
+                      <Col md={6}>
+                        <small className="text-muted d-block">Producto</small>
+                        <span className="fw-semibold">{ventaCreada.producto?.nombre}</span>
+                      </Col>
+                      <Col md={6}>
+                        <small className="text-muted d-block">Tipo de Venta</small>
+                        <Badge bg="primary">{ventaCreada.tipoVenta}</Badge>
+                      </Col>
+                      <Col md={6}>
+                        <small className="text-muted d-block">Monto Total</small>
+                        <span className="fw-bold text-success">{formatMonto(ventaCreada.montoTotal)}</span>
+                      </Col>
+                      <Col md={6}>
+                        <small className="text-muted d-block">Fecha</small>
+                        <span className="fw-semibold">{formatFecha(ventaCreada.fechaRealizada)}</span>
+                      </Col>
+                      {ventaCreada.cuotas && ventaCreada.cuotas.length > 0 && (
+                        <Col md={6}>
+                          <small className="text-muted d-block">Cuotas</small>
+                          <span className="fw-semibold">
+                            {ventaCreada.cuotas.length} x {formatMonto(ventaCreada.cuotas[0]?.montoCuota)}
+                          </span>
+                        </Col>
+                      )}
+                    </Row>
+                  </div>
+
+                  <Button
+                    onClick={handleNuevaVenta}
+                    className="rounded-3 px-4"
+                    style={{
+                      backgroundColor: '#3483FA',
+                      borderColor: '#3483FA',
+                      fontWeight: '500'
+                    }}
+                  >
+                    <i className="bi bi-plus-circle me-2"></i>
+                    Nueva Venta
+                  </Button>
+                </Card.Body>
+              </Card>
             )}
           </Col>
         </Row>

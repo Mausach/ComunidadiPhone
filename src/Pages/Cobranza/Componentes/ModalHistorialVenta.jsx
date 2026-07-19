@@ -2,10 +2,11 @@
 import { obtenerDetalleVenta } from '../Helpers/DetalleVenta';
 
 // Cobranza/Componentes/ModalHistorialVenta.jsx
+
 import React, { useState, useEffect } from 'react';
 import { 
   Modal, Row, Col, Badge, Button, Card, 
-  Spinner, Alert 
+  Spinner, Alert, Accordion 
 } from 'react-bootstrap';
 
 
@@ -17,7 +18,8 @@ export const ModalHistorialVenta = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [venta, setVenta] = useState(null);
-  const [notasCompletas, setNotasCompletas] = useState([]);
+  const [notasAgrupadas, setNotasAgrupadas] = useState([]);
+  const [activeKey, setActiveKey] = useState(null);
 
   // ==========================================
   // CARGAR DETALLE COMPLETO DE LA VENTA
@@ -37,7 +39,6 @@ export const ModalHistorialVenta = ({
         const data = result.venta;
         setVenta(data);
         procesarNotas(data);
-        console.log('📊 Datos de venta cargados:', data);
       }
     } catch (error) {
       setError(error.message || 'Error al cargar el historial');
@@ -48,51 +49,61 @@ export const ModalHistorialVenta = ({
   };
 
   // ==========================================
-  // PROCESAR NOTAS DE VENTA Y CUOTAS
+  // PROCESAR NOTAS AGRUPADAS POR CUOTA/VENTA
   // ==========================================
   const procesarNotas = (data) => {
-    const todasLasNotas = [];
+    const grupos = [];
 
-    // 1. Notas de la venta
+    // 1. Grupo: Notas de la venta
     if (data.notas && Array.isArray(data.notas) && data.notas.length > 0) {
-      data.notas.forEach(nota => {
-        todasLasNotas.push({
+      grupos.push({
+        id: 'venta',
+        titulo: '📋 Notas de la Venta',
+        icono: 'bi-file-text',
+        color: '#6c757d',
+        bgColor: '#f8f9fa',
+        cantidad: data.notas.length,
+        notas: data.notas.map(nota => ({
           ...nota,
-          tipo: '📋 Venta',
-          cuotaNumero: null,
-          cuotaEstado: null,
-          montoCuota: null,
-          esNotaVenta: true,
           fecha: new Date(nota.fecha)
-        });
+        })).sort((a, b) => b.fecha - a.fecha)
       });
     }
 
-    // 2. Notas de las cuotas
-    if (data.cuotas && Array.isArray(data.cuotas) && data.cuotas.length > 0) {
+    // 2. Grupos: Notas por cada cuota que tenga notas
+    if (data.cuotas && Array.isArray(data.cuotas)) {
       data.cuotas.forEach(cuota => {
         if (cuota.notas && Array.isArray(cuota.notas) && cuota.notas.length > 0) {
-          cuota.notas.forEach(nota => {
-            todasLasNotas.push({
+          const estadoColor = getEstadoCuotaColor(cuota.estado_cuota);
+          const estadoBg = {
+            'success': '#e6f7ee',
+            'warning': '#fff3ed',
+            'danger': '#ffeaea',
+            'info': '#e8f0fe'
+          }[estadoColor] || '#f8f9fa';
+
+          grupos.push({
+            id: `cuota-${cuota.numeroCuota}`,
+            titulo: `💰 Cuota #${cuota.numeroCuota}`,
+            subtitulo: `${formatMonto(cuota.montoCuota)} · ${getEstadoCuotaLabel(cuota.estado_cuota)}`,
+            icono: 'bi-cash-stack',
+            color: getEstadoCuotaColorHex(cuota.estado_cuota),
+            bgColor: estadoBg,
+            cantidad: cuota.notas.length,
+            cuotaNumero: cuota.numeroCuota,
+            estadoCuota: cuota.estado_cuota,
+            montoCuota: cuota.montoCuota,
+            fechaCobro: cuota.fechaCobro,
+            notas: cuota.notas.map(nota => ({
               ...nota,
-              tipo: `💰 Cuota #${cuota.numeroCuota}`,
-              cuotaNumero: cuota.numeroCuota,
-              cuotaEstado: cuota.estado_cuota,
-              montoCuota: cuota.montoCuota,
-              fechaCobro: cuota.fechaCobro,
-              esNotaVenta: false,
               fecha: new Date(nota.fecha)
-            });
+            })).sort((a, b) => b.fecha - a.fecha)
           });
         }
       });
     }
 
-    // Ordenar por fecha (más reciente primero)
-    todasLasNotas.sort((a, b) => b.fecha - a.fecha);
-    
-    console.log('📝 Notas procesadas:', todasLasNotas);
-    setNotasCompletas(todasLasNotas);
+    setNotasAgrupadas(grupos);
   };
 
   // ==========================================
@@ -103,8 +114,8 @@ export const ModalHistorialVenta = ({
     const colores = {
       'al dia': 'success',
       'atrasado': 'danger',
-      'cancelado': 'secondary',
-      'refinanciado': 'info',
+      'cancelado': 'success',
+      'refinanciado': 'warning',
       'cobro judicial': 'dark',
       'caducado': 'secondary'
     };
@@ -127,15 +138,27 @@ export const ModalHistorialVenta = ({
     const colores = {
       'pagada': 'success',
       'pendiente': 'warning',
+      'pago parcial': 'info',
       'no pagada': 'danger'
     };
     return colores[estado] || 'secondary';
+  };
+
+  const getEstadoCuotaColorHex = (estado) => {
+    const colores = {
+      'pagada': '#00a650',
+      'pendiente': '#ff7733',
+      'pago parcial': '#3483FA',
+      'no pagada': '#dc3545'
+    };
+    return colores[estado] || '#666';
   };
 
   const getEstadoCuotaLabel = (estado) => {
     const labels = {
       'pagada': 'Pagada ✅',
       'pendiente': 'Pendiente ⏳',
+      'pago parcial': 'Pago Parcial 💰',
       'no pagada': 'No pagada ❌'
     };
     return labels[estado] || estado;
@@ -152,12 +175,20 @@ export const ModalHistorialVenta = ({
     });
   };
 
+  const formatFechaCorta = (fecha) => {
+    if (!fecha) return '-';
+    return new Date(fecha).toLocaleDateString('es-AR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  };
+
   const formatMonto = (monto) => {
     if (!monto) return '$0';
     return `$${monto.toLocaleString('es-AR')}`;
   };
 
-  // Obtener tipo de venta con emoji
   const getTipoVentaEmoji = (tipo) => {
     const tipos = {
       'contado': '💵',
@@ -167,6 +198,9 @@ export const ModalHistorialVenta = ({
     };
     return tipos[tipo] || '📦';
   };
+
+  // Total de notas
+  const totalNotas = notasAgrupadas.reduce((sum, g) => sum + g.cantidad, 0);
 
   return (
     <Modal
@@ -180,6 +214,11 @@ export const ModalHistorialVenta = ({
         <Modal.Title className="fw-bold">
           <i className="bi bi-clock-history me-2" style={{ color: '#6c757d' }}></i>
           Historial de Actividad
+          {totalNotas > 0 && (
+            <Badge bg="secondary" className="ms-2 rounded-pill">
+              {totalNotas} {totalNotas === 1 ? 'nota' : 'notas'}
+            </Badge>
+          )}
         </Modal.Title>
       </Modal.Header>
 
@@ -305,85 +344,102 @@ export const ModalHistorialVenta = ({
             )}
 
             {/* ==========================================
-                SECCIÓN 3: LISTA DE NOTAS COMPLETAS
+                SECCIÓN 3: NOTAS AGRUPADAS (ACORDEÓN)
                 ========================================== */}
             <div>
-              <h6 className="fw-bold mb-2" style={{ fontSize: '0.85rem' }}>
+              <h6 className="fw-bold mb-3" style={{ fontSize: '0.85rem' }}>
                 <i className="bi bi-sticky me-2" style={{ color: '#6c757d' }}></i>
                 Historial de Notas
-                <Badge bg="secondary" className="ms-2 rounded-pill">
-                  {notasCompletas.length}
-                </Badge>
               </h6>
 
-              {notasCompletas.length === 0 ? (
-                <div className="text-center py-3 text-muted small">
-                  <i className="bi bi-inbox me-1"></i>
+              {notasAgrupadas.length === 0 ? (
+                <div className="text-center py-4 text-muted small">
+                  <i className="bi bi-inbox" style={{ fontSize: '2rem', display: 'block', marginBottom: '8px' }}></i>
                   No hay notas registradas
                 </div>
               ) : (
-                <div className="notas-list">
-                  {notasCompletas.map((nota, index) => (
-                    <div 
-                      key={index} 
-                      className="border-bottom py-2 last:border-0"
+                <Accordion 
+                  activeKey={activeKey} 
+                  onSelect={(key) => setActiveKey(key)}
+                  className="notas-accordion"
+                >
+                  {notasAgrupadas.map((grupo, idx) => (
+                    <Accordion.Item 
+                      eventKey={String(idx)} 
+                      key={grupo.id}
+                      className="border-0 mb-2"
                     >
-                      <div className="d-flex justify-content-between align-items-start">
-                        <div className="flex-grow-1">
-                          {/* Badges de la nota */}
-                          <div className="d-flex align-items-center gap-2 mb-1 flex-wrap">
-                            <Badge 
-                              bg={nota.esNotaVenta ? 'secondary' : 'info'}
-                              className="rounded-pill"
-                              style={{ fontSize: '0.65rem' }}
-                            >
-                              {nota.tipo}
-                            </Badge>
-                            
-                            {!nota.esNotaVenta && nota.cuotaEstado && (
-                              <Badge 
-                                bg={getEstadoCuotaColor(nota.cuotaEstado)}
-                                className="rounded-pill"
-                                style={{ fontSize: '0.65rem' }}
-                              >
-                                {getEstadoCuotaLabel(nota.cuotaEstado)}
-                              </Badge>
-                            )}
-                            
-                            {!nota.esNotaVenta && nota.montoCuota && (
-                              <span className="text-muted small">
-                                {formatMonto(nota.montoCuota)}
+                      <Accordion.Header 
+                        className="rounded-3 shadow-sm"
+                        style={{
+                          backgroundColor: grupo.bgColor,
+                          borderLeft: `4px solid ${grupo.color}`,
+                          borderRadius: '8px',
+                          padding: '4px 0'
+                        }}
+                      >
+                        <div className="d-flex align-items-center justify-content-between w-100 pe-3">
+                          <div className="d-flex align-items-center gap-2">
+                            <i className={`${grupo.icono}`} style={{ color: grupo.color, fontSize: '1.1rem' }}></i>
+                            <span className="fw-semibold" style={{ fontSize: '0.9rem' }}>
+                              {grupo.titulo}
+                            </span>
+                            {grupo.subtitulo && (
+                              <span className="text-muted" style={{ fontSize: '0.8rem' }}>
+                                {grupo.subtitulo}
                               </span>
                             )}
                           </div>
-
-                          {/* Texto de la nota */}
-                          <p className="mb-1 small">{nota.texto}</p>
-
-                          {/* Información de usuario y fecha */}
-                          <div className="d-flex gap-3 text-muted small flex-wrap">
-                            <span>
-                              <i className="bi bi-person me-1"></i>
-                              {nota.usuario?.nombre && nota.usuario.nombre !== 'undefined undefined' 
-                                ? nota.usuario.nombre 
-                                : 'Sistema'}
-                            </span>
-                            <span>
-                              <i className="bi bi-clock me-1"></i>
-                              {formatFecha(nota.fecha)}
-                            </span>
-                            {!nota.esNotaVenta && nota.fechaCobro && (
-                              <span>
-                                <i className="bi bi-calendar me-1"></i>
-                                Fecha cobro: {formatFecha(nota.fechaCobro)}
-                              </span>
-                            )}
-                          </div>
+                          <Badge 
+                            style={{
+                              backgroundColor: grupo.color,
+                              color: '#fff',
+                              fontWeight: '600',
+                              fontSize: '0.7rem',
+                              padding: '4px 10px',
+                              borderRadius: '10px'
+                            }}
+                          >
+                            {grupo.cantidad}
+                          </Badge>
                         </div>
-                      </div>
-                    </div>
+                      </Accordion.Header>
+                      <Accordion.Body className="pt-3 pb-2">
+                        {grupo.notas.map((nota, notaIdx) => (
+                          <div 
+                            key={notaIdx}
+                            className="mb-3 pb-3"
+                            style={{
+                              borderBottom: notaIdx < grupo.notas.length - 1 ? '1px solid #f0f0f0' : 'none'
+                            }}
+                          >
+                            <p className="mb-2" style={{ fontSize: '0.9rem', color: '#333', lineHeight: '1.5' }}>
+                              {nota.texto}
+                            </p>
+                            <div className="d-flex align-items-center gap-3 text-muted flex-wrap" style={{ fontSize: '0.75rem' }}>
+                              <span className="d-flex align-items-center gap-1">
+                                <i className="bi bi-person"></i>
+                                {nota.usuario?.nombre && nota.usuario.nombre !== 'undefined undefined' 
+                                  ? nota.usuario.nombre 
+                                  : 'Sistema'}
+                              </span>
+                              <span className="d-flex align-items-center gap-1">
+                                <i className="bi bi-clock"></i>
+                                {formatFecha(nota.fecha)}
+                              </span>
+                              {!grupo.id.startsWith('venta') && grupo.fechaCobro && (
+                                <span className="d-flex align-items-center gap-1">
+                                  <i className="bi bi-calendar"></i>
+                                  Vence: {formatFechaCorta(grupo.fechaCobro)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </Accordion.Body>
+                    </Accordion.Item>
                   ))}
-                </div>
+                </Accordion>
               )}
             </div>
           </>
@@ -432,24 +488,23 @@ export const ModalHistorialVenta = ({
           background: #a8a8a8;
         }
 
-        .notas-list {
-          max-height: 350px;
-          overflow-y: auto;
-          padding-right: 4px;
+        .notas-accordion .accordion-button {
+          background-color: transparent !important;
+          box-shadow: none !important;
+          padding: 12px 16px;
         }
 
-        .notas-list::-webkit-scrollbar {
-          width: 4px;
+        .notas-accordion .accordion-button:not(.collapsed) {
+          background-color: transparent !important;
+          box-shadow: none !important;
         }
 
-        .notas-list::-webkit-scrollbar-track {
-          background: #f1f1f1;
-          border-radius: 2px;
+        .notas-accordion .accordion-button::after {
+          background-size: 0.9rem;
         }
 
-        .notas-list::-webkit-scrollbar-thumb {
-          background: #c1c1c1;
-          border-radius: 2px;
+        .notas-accordion .accordion-body {
+          padding: 8px 16px 16px 20px;
         }
 
         @media (max-width: 768px) {

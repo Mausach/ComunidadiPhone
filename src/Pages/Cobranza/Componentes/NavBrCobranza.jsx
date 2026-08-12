@@ -1,35 +1,14 @@
-// Cobranza/Componentes/NavBarCobranza.jsx
-
-import React, { useState, useEffect } from 'react';
-import { Navbar, Container, Nav, Badge, Spinner } from 'react-bootstrap';
+import React from 'react';
+import { Navbar, Nav, Container, Dropdown } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-import { obtenerCobranzasDelDia } from '../Helpers/Cobranza_Dia';
+import logo from '../../../assets/logo.png';
 
-
-export const NavBarCobranza = ({ usuario }) => {
+export const NavBarCobranza = ({ usuario, vistaActiva, onCambiarVista }) => {
   const navigate = useNavigate();
-  
-  // Estado para la notificación
-  const [pendientesHoy, setPendientesHoy] = useState(0);
-  const [cargando, setCargando] = useState(true);
 
-  // Cargar al montar y cada 5 minutos
-  useEffect(() => {
-    cargarPendientes();
-    const intervalo = setInterval(cargarPendientes, 5 * 60 * 1000);
-    return () => clearInterval(intervalo);
-  }, []);
-
-  const cargarPendientes = async () => {
-    try {
-      const data = await obtenerCobranzasDelDia();
-      setPendientesHoy(data.totalesDia?.cuotasPendientesHoy || 0);
-    } catch (error) {
-      console.error('Error al cargar cobranzas del día:', error);
-    } finally {
-      setCargando(false);
-    }
-  };
+  const opciones = [
+    { label: 'Panel', icon: 'bi-speedometer2', vista: 'panel' },
+  ];
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -38,77 +17,60 @@ export const NavBarCobranza = ({ usuario }) => {
   };
 
   return (
-    <Navbar bg="white" className="shadow-sm" expand="lg">
+    <Navbar bg="white" expand="lg" className="shadow-sm border-bottom" sticky="top">
       <Container fluid>
-        <Navbar.Brand 
-          className="fw-bold d-flex align-items-center"
-          style={{ color: '#00a650', cursor: 'pointer' }}
-          onClick={() => navigate('/cobranza')}
+        <Navbar.Brand
+          className="d-flex align-items-center"
+          onClick={() => onCambiarVista('panel')}
+          style={{ cursor: 'pointer' }}
         >
-          <i className="bi bi-cash-coin me-2"></i>
-          Gestión de Cobranza
+          <img alt="Logo" src={logo} width="75" className="d-inline-block align-top" />
+          <span className="fw-bold" style={{ color: '#021C5E' }}>Comunidad iPhone</span>
         </Navbar.Brand>
 
         <Navbar.Toggle aria-controls="navbar-cobranza" />
         
         <Navbar.Collapse id="navbar-cobranza">
-          <Nav className="ms-auto d-flex align-items-center">
-            {/* Botón Campana con contador */}
-            <Nav.Link 
-              className="position-relative me-3"
-              onClick={() => cargarPendientes()}
-              style={{ cursor: 'pointer' }}
-              title={`${pendientesHoy} cuotas pendientes para hoy`}
-            >
-              {cargando ? (
-                <Spinner size="sm" style={{ color: '#999' }} />
-              ) : (
-                <>
-                  <i 
-                    className="bi bi-bell" 
-                    style={{ 
-                      color: pendientesHoy > 0 ? '#dc3545' : '#999',
-                      fontSize: '1.2rem'
-                    }}
-                  ></i>
-                  {pendientesHoy > 0 && (
-                    <Badge
-                      className="position-absolute"
-                      style={{
-                        top: '0px',
-                        right: '-2px',
-                        backgroundColor: '#dc3545',
-                        color: '#fff',
-                        borderRadius: '50%',
-                        width: '20px',
-                        height: '20px',
-                        fontSize: '0.65rem',
-                        fontWeight: '700',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
-                      {pendientesHoy}
-                    </Badge>
-                  )}
-                </>
-              )}
-            </Nav.Link>
-
-            {/* Usuario */}
-            {usuario && (
-              <Nav.Link className="text-muted" disabled>
-                <i className="bi bi-person-circle me-1"></i>
-                {usuario.nombre} {usuario.apellido}
+          <Nav className="me-auto">
+            {opciones.map((opcion, index) => (
+              <Nav.Link
+                key={index}
+                onClick={() => onCambiarVista(opcion.vista)}
+                className="d-flex align-items-center mx-1"
+                style={{
+                  color: vistaActiva === opcion.vista ? '#3483FA' : '#666',
+                  fontWeight: vistaActiva === opcion.vista ? '600' : '400',
+                  borderBottom: vistaActiva === opcion.vista ? '2px solid #3483FA' : '2px solid transparent',
+                  transition: 'all 0.2s ease',
+                  cursor: 'pointer'
+                }}
+              >
+                <i className={`${opcion.icon} me-2`}></i>
+                {opcion.label}
               </Nav.Link>
-            )}
+            ))}
+          </Nav>
 
-            {/* Cerrar sesión */}
-            <Nav.Link onClick={handleLogout} className="text-danger">
-              <i className="bi bi-box-arrow-right me-1"></i>
-              Salir
-            </Nav.Link>
+          <Nav>
+            <Dropdown align="end">
+              <Dropdown.Toggle variant="light" id="dropdown-usuario" className="d-flex align-items-center"
+                style={{ border: '1px solid #e5e5e5', borderRadius: '6px' }}>
+                <div className="d-flex align-items-center">
+                  <div className="rounded-circle d-flex align-items-center justify-content-center me-2"
+                    style={{ width: '32px', height: '32px', backgroundColor: '#3483FA', color: 'white', fontSize: '0.85rem', fontWeight: '600' }}>
+                    {usuario?.nombre?.charAt(0)?.toUpperCase()}
+                  </div>
+                  <span className="d-none d-md-inline" style={{ color: '#333' }}>{usuario?.nombre} {usuario?.apellido}</span>
+                </div>
+              </Dropdown.Toggle>
+              <Dropdown.Menu className="shadow-sm border-0">
+                <Dropdown.Header style={{ color: '#666', fontSize: '0.8rem' }}>{usuario?.email}</Dropdown.Header>
+                <Dropdown.Divider />
+                <Dropdown.Item onClick={handleLogout} className="d-flex align-items-center" style={{ color: '#dc3545' }}>
+                  <i className="bi bi-box-arrow-right me-2"></i>Cerrar Sesión
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
           </Nav>
         </Navbar.Collapse>
       </Container>

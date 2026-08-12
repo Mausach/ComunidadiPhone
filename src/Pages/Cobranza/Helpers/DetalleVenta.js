@@ -7,7 +7,6 @@ export const obtenerDetalleVenta = async (id) => {
       throw new Error('El ID de la venta es obligatorio');
     }
 
-    //console.log('🔍 Obteniendo detalle de venta:', id);
 
     const resp = await authApi.get(`/cobranza/ventas/${id}`);
 

@@ -4,7 +4,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Container, Row, Col, Card, Form, InputGroup, Badge, Collapse, Spinner, Alert } from 'react-bootstrap';
 import { obtenerEquiposCanjeados } from '../Helpers/ReportesMensuales';
 
-
 export const EquiposCanjeados = () => {
   // Estados
   const [equipos, setEquipos] = useState([]);
@@ -102,8 +101,7 @@ export const EquiposCanjeados = () => {
     return (
       <Badge
         style={{
-          backgroundColor: c.bg,
-          color: c.color,
+          
           fontWeight: '500',
           padding: '4px 10px',
           borderRadius: '4px',
@@ -195,16 +193,16 @@ export const EquiposCanjeados = () => {
             <Card className="h-100 shadow-sm border-0" style={{ borderRadius: '8px' }}>
               <Card.Body className="p-3 text-center">
                 <div className="d-flex justify-content-center gap-2 mb-1">
-                  <Badge style={{ backgroundColor: '#e6f7ee', color: '#00a650', fontSize: '0.7rem' }}>
+                  <Badge bg='light' style={{ color: '#00a650', fontSize: '0.7rem' }}>
                     {totalesGenerales.porEstado.excelente} E
                   </Badge>
-                  <Badge style={{ backgroundColor: '#e8f0fe', color: '#3483FA', fontSize: '0.7rem' }}>
+                  <Badge bg='light' style={{ color: '#3483FA', fontSize: '0.7rem' }}>
                     {totalesGenerales.porEstado.bueno} B
                   </Badge>
-                  <Badge style={{ backgroundColor: '#fff3ed', color: '#ff7733', fontSize: '0.7rem' }}>
+                  <Badge bg='light' style={{ color: '#ff7733', fontSize: '0.7rem' }}>
                     {totalesGenerales.porEstado.regular} R
                   </Badge>
-                  <Badge style={{ backgroundColor: '#ffeaea', color: '#dc3545', fontSize: '0.7rem' }}>
+                  <Badge bg='light' style={{ color: '#dc3545', fontSize: '0.7rem' }}>
                     {totalesGenerales.porEstado.malo} M
                   </Badge>
                 </div>

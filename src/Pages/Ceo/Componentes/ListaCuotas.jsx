@@ -3,116 +3,49 @@
 import React, { useState } from 'react';
 import { Card, Table, Badge, Collapse, Modal } from 'react-bootstrap';
 
-export const ListaCuotas = ({ cuotasAgrupadas, resumen }) => {
+export const ListaCuotas = ({ cuotasAgrupadas }) => {
   const [seccionExpandida, setSeccionExpandida] = useState(null);
   const [notaSeleccionada, setNotaSeleccionada] = useState(null);
 
   const formatoMoneda = (valor) => {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS',
-      minimumFractionDigits: 0
-    }).format(valor);
+    if (!valor && valor !== 0) return '$0';
+    return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(valor);
   };
 
-  const formatoFecha = (fecha) => {
-    if (!fecha) return '-';
-    return new Date(fecha).toLocaleDateString('es-AR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  };
+  const formatoFecha = (fecha) => !fecha ? '-' : new Date(fecha).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const formatoFechaHora = (fecha) => !fecha ? '-' : new Date(fecha).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-  const formatoFechaHora = (fecha) => {
-    if (!fecha) return '-';
-    return new Date(fecha).toLocaleString('es-AR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const toggleSeccion = (seccion) => {
-    setSeccionExpandida(seccionExpandida === seccion ? null : seccion);
-  };
+  const toggleSeccion = (seccion) => setSeccionExpandida(seccionExpandida === seccion ? null : seccion);
 
   const secciones = [
-    {
-      key: 'pagadas',
-      titulo: 'Cuotas Cobradas',
-      icono: 'bi-check-circle',
-      color: '#00a650',
-      bgColor: '#e6f7ee',
-      cuotas: cuotasAgrupadas.pagadas || [],
-      resumen: resumen?.pagadas
-    },
-    {
-      key: 'pendientes',
-      titulo: 'Cuotas Pendientes',
-      icono: 'bi-clock',
-      color: '#ff7733',
-      bgColor: '#fff3ed',
-      cuotas: cuotasAgrupadas.pendientes || [],
-      resumen: resumen?.pendientes
-    },
-    {
-      key: 'noPagadas',
-      titulo: 'Cuotas Vencidas',
-      icono: 'bi-x-circle',
-      color: '#dc3545',
-      bgColor: '#ffeaea',
-      cuotas: cuotasAgrupadas.noPagadas || [],
-      resumen: resumen?.noPagadas
-    }
+    { key: 'pagadas', titulo: 'Cuotas Cobradas', icono: 'bi-check-circle', color: '#00a650', bgColor: '#e6f7ee', cuotas: cuotasAgrupadas.pagadas || [] },
+    { key: 'pagoParcial', titulo: 'Pago Parcial', icono: 'bi-wallet2', color: '#0dcaf0', bgColor: '#e8f0fe', cuotas: cuotasAgrupadas.pagoParcial || [] },
+    { key: 'pendientes', titulo: 'Cuotas Pendientes', icono: 'bi-clock', color: '#ff7733', bgColor: '#fff3ed', cuotas: cuotasAgrupadas.pendientes || [] },
+    { key: 'noPagadas', titulo: 'Cuotas Vencidas', icono: 'bi-x-circle', color: '#dc3545', bgColor: '#ffeaea', cuotas: cuotasAgrupadas.noPagadas || [] }
   ];
 
   return (
     <>
       {secciones.map((seccion) => {
         if (seccion.cuotas.length === 0) return null;
+        const totalSeccion = seccion.cuotas.reduce((s, c) => s + (c.totalCuota || c.montoCuota), 0);
 
         return (
-          <Card 
-            key={seccion.key}
-            className="shadow-sm border-0 mb-3"
-            style={{ borderRadius: '8px' }}
-          >
+          <Card key={seccion.key} className="shadow-sm border-0 mb-3" style={{ borderRadius: '8px' }}>
             <Card.Body className="p-0">
-              {/* Header de la sección */}
-              <div 
-                className="d-flex align-items-center justify-content-between p-3"
-                style={{ 
-                  cursor: 'pointer',
-                  backgroundColor: seccionExpandida === seccion.key ? seccion.bgColor : '#fff',
-                  borderRadius: '8px',
-                  transition: 'background-color 0.2s ease'
-                }}
-                onClick={() => toggleSeccion(seccion.key)}
-              >
+              <div className="d-flex align-items-center justify-content-between p-3"
+                style={{ cursor: 'pointer', backgroundColor: seccionExpandida === seccion.key ? seccion.bgColor : '#fff', borderRadius: '8px', transition: 'background-color 0.2s ease' }}
+                onClick={() => toggleSeccion(seccion.key)}>
                 <div className="d-flex align-items-center">
-                  <i 
-                    className={`bi ${seccion.icono} me-3`}
-                    style={{ color: seccion.color, fontSize: '1.3rem' }}
-                  ></i>
+                  <i className={`bi ${seccion.icono} me-3`} style={{ color: seccion.color, fontSize: '1.3rem' }}></i>
                   <div>
-                    <h5 className="mb-0 fw-bold" style={{ color: '#333', fontSize: '1rem' }}>
-                      {seccion.titulo}
-                    </h5>
-                    <small style={{ color: '#999' }}>
-                      {seccion.cuotas.length} cuotas · {formatoMoneda(seccion.resumen?.monto || 0)}
-                    </small>
+                    <h5 className="mb-0 fw-bold" style={{ color: '#333', fontSize: '1rem' }}>{seccion.titulo}</h5>
+                    <small style={{ color: '#999' }}>{seccion.cuotas.length} cuotas · {formatoMoneda(totalSeccion)}</small>
                   </div>
                 </div>
-                <i 
-                  className={`bi bi-chevron-${seccionExpandida === seccion.key ? 'up' : 'down'}`}
-                  style={{ color: '#666' }}
-                ></i>
+                <i className={`bi bi-chevron-${seccionExpandida === seccion.key ? 'up' : 'down'}`} style={{ color: '#666' }}></i>
               </div>
 
-              {/* Tabla de cuotas */}
               <Collapse in={seccionExpandida === seccion.key}>
                 <div>
                   <div className="table-responsive px-3 pb-3">
@@ -123,6 +56,9 @@ export const ListaCuotas = ({ cuotasAgrupadas, resumen }) => {
                           <th style={{ color: '#666', fontSize: '0.8rem', fontWeight: '600' }}>Producto</th>
                           <th style={{ color: '#666', fontSize: '0.8rem', fontWeight: '600' }}>Cuota</th>
                           <th style={{ color: '#666', fontSize: '0.8rem', fontWeight: '600' }}>Monto</th>
+                          <th style={{ color: '#666', fontSize: '0.8rem', fontWeight: '600' }}>Recargos</th>
+                          <th style={{ color: '#666', fontSize: '0.8rem', fontWeight: '600' }}>Total</th>
+                          <th style={{ color: '#666', fontSize: '0.8rem', fontWeight: '600' }}>Pagado</th>
                           <th style={{ color: '#666', fontSize: '0.8rem', fontWeight: '600' }}>Vencimiento</th>
                           {seccion.key === 'pagadas' && (
                             <>
@@ -136,73 +72,37 @@ export const ListaCuotas = ({ cuotasAgrupadas, resumen }) => {
                       </thead>
                       <tbody>
                         {seccion.cuotas.map((cuota, idx) => (
-                          <tr 
-                            key={idx}
-                            style={{ borderBottom: '1px solid #f5f5f5' }}
-                          >
+                          <tr key={idx} style={{ borderBottom: '1px solid #f5f5f5' }}>
                             <td>
-                              <div style={{ fontWeight: '500', color: '#333', fontSize: '0.9rem' }}>
-                                {cuota.cliente.apellido}, {cuota.cliente.nombre}
-                              </div>
-                              <small style={{ color: '#999', fontSize: '0.8rem' }}>
-                                {cuota.localidad}
-                              </small>
+                              <div style={{ fontWeight: '500', color: '#333', fontSize: '0.9rem' }}>{cuota.cliente.apellido}, {cuota.cliente.nombre}</div>
+                              <small style={{ color: '#999', fontSize: '0.8rem' }}>{cuota.localidad}</small>
                             </td>
                             <td>
-                              <div style={{ color: '#333', fontSize: '0.85rem' }}>
-                                {cuota.producto}
-                              </div>
-                              <small style={{ color: '#999', fontSize: '0.8rem' }}>
-                                {cuota.tipoVenta}
-                              </small>
+                              <div style={{ color: '#333', fontSize: '0.85rem' }}>{cuota.producto}</div>
+                              <small style={{ color: '#999', fontSize: '0.8rem' }}>{cuota.tipoVenta}</small>
                             </td>
-                            <td style={{ color: '#666', fontSize: '0.9rem' }}>
-                              #{cuota.numeroCuota}
+                            <td style={{ color: '#666', fontSize: '0.9rem' }}>#{cuota.numeroCuota}</td>
+                            <td style={{ fontWeight: '500', fontSize: '0.9rem' }}>{formatoMoneda(cuota.montoCuota)}</td>
+                            <td style={{ color: cuota.totalRecargos > 0 ? '#dc3545' : '#999', fontSize: '0.9rem', fontWeight: cuota.totalRecargos > 0 ? '500' : '400' }}>
+                              {cuota.totalRecargos > 0 ? '+' + formatoMoneda(cuota.totalRecargos) : '-'}
                             </td>
-                            <td style={{ fontWeight: '500', fontSize: '0.9rem' }}>
-                              {formatoMoneda(cuota.montoCuota)}
-                            </td>
-                            <td style={{ color: '#666', fontSize: '0.85rem' }}>
-                              {formatoFecha(cuota.fechaCobro)}
-                            </td>
+                            <td style={{ fontWeight: '500', fontSize: '0.9rem' }}>{formatoMoneda(cuota.totalCuota || cuota.montoCuota)}</td>
+                            <td className="text-success" style={{ fontSize: '0.9rem' }}>{cuota.montoPagado > 0 ? formatoMoneda(cuota.montoPagado) : '-'}</td>
+                            <td style={{ color: '#666', fontSize: '0.85rem' }}>{formatoFecha(cuota.fechaCobro)}</td>
                             {seccion.key === 'pagadas' && (
                               <>
-                                <td style={{ color: '#00a650', fontSize: '0.85rem' }}>
-                                  {formatoFecha(cuota.fechaCobrada)}
-                                </td>
-                                <td>
-                                  <Badge
-                                    bg='success'
-                                  >
-                                    {cuota.metodoPago || '-'}
-                                  </Badge>
-                                </td>
-                                <td style={{ color: '#666', fontSize: '0.85rem' }}>
-                                  {cuota.cobrador || '-'}
-                                </td>
+                                <td style={{ color: '#00a650', fontSize: '0.85rem' }}>{formatoFecha(cuota.fechaCobrada)}</td>
+                                <td><Badge bg="success">{cuota.metodoPago || '-'}</Badge></td>
+                                <td style={{ color: '#666', fontSize: '0.85rem' }}>{cuota.cobrador || '-'}</td>
                               </>
                             )}
-                            
-                            {/* COLUMNA DE NOTAS */}
                             <td>
                               {cuota.notas && cuota.notas.length > 0 ? (
-                                <Badge bg='secondary'
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setNotaSeleccionada(cuota);
-                                  }} 
-                                  style={{
-                                    cursor: 'pointer',
-                                  }}
-                               
-                                >
-                                  <i className="bi bi-chat-dots me-1"></i>
-                                  {cuota.notas.length} {cuota.notas.length === 1 ? 'nota' : 'notas'}
+                                <Badge bg="secondary" onClick={(e) => { e.stopPropagation(); setNotaSeleccionada(cuota); }} style={{ cursor: 'pointer' }}>
+                                  <i className="bi bi-chat-dots me-1"></i>{cuota.notas.length} {cuota.notas.length === 1 ? 'nota' : 'notas'}
                                 </Badge>
                               ) : (
-                                <span style={{ color: '#ccc', fontSize: '0.85rem' }}>
-                                  Sin notas
-                                </span>
+                                <span style={{ color: '#ccc', fontSize: '0.85rem' }}>Sin notas</span>
                               )}
                             </td>
                           </tr>
@@ -217,88 +117,34 @@ export const ListaCuotas = ({ cuotasAgrupadas, resumen }) => {
         );
       })}
 
-      {/* MODAL DE NOTAS */}
-      <Modal
-        show={notaSeleccionada !== null}
-        onHide={() => setNotaSeleccionada(null)}
-        centered
-        size="lg"
-      >
+      <Modal show={notaSeleccionada !== null} onHide={() => setNotaSeleccionada(null)} centered size="lg">
         {notaSeleccionada && (
           <>
-            <Modal.Header 
-              closeButton
-              style={{ 
-                borderBottom: '1px solid #e5e5e5',
-                backgroundColor: '#fff'
-              }}
-            >
+            <Modal.Header closeButton style={{ borderBottom: '1px solid #e5e5e5', backgroundColor: '#fff' }}>
               <div>
-                <Modal.Title style={{ color: '#333', fontSize: '1.1rem' }}>
-                  <i className="bi bi-chat-dots me-2" style={{ color: '#3483FA' }}></i>
-                  Historial de Notas
-                </Modal.Title>
+                <Modal.Title style={{ color: '#333', fontSize: '1.1rem' }}><i className="bi bi-chat-dots me-2" style={{ color: '#3483FA' }}></i>Historial de Notas</Modal.Title>
                 <div style={{ color: '#666', fontSize: '0.85rem', marginTop: '4px' }}>
                   <strong>{notaSeleccionada.cliente.apellido}, {notaSeleccionada.cliente.nombre}</strong>
-                  {' · '}
-                  {notaSeleccionada.producto}
-                  {' · '}
-                  Cuota #{notaSeleccionada.numeroCuota}
-                  {' · '}
-                  {formatoMoneda(notaSeleccionada.montoCuota)}
+                  {' · '}{notaSeleccionada.producto}{' · '}Cuota #{notaSeleccionada.numeroCuota}{' · '}{formatoMoneda(notaSeleccionada.montoCuota)}
                 </div>
               </div>
             </Modal.Header>
-
             <Modal.Body style={{ padding: '0' }}>
               <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
                 {notaSeleccionada.notas.map((nota, index) => (
-                  <div 
-                    key={index}
-                    style={{
-                      padding: '16px 20px',
-                      borderBottom: index < notaSeleccionada.notas.length - 1 ? '1px solid #f0f0f0' : 'none',
-                      backgroundColor: index % 2 === 0 ? '#fff' : '#fafafa'
-                    }}
-                  >
+                  <div key={index} style={{ padding: '16px 20px', borderBottom: index < notaSeleccionada.notas.length - 1 ? '1px solid #f0f0f0' : 'none', backgroundColor: index % 2 === 0 ? '#fff' : '#fafafa' }}>
                     <div className="d-flex justify-content-between align-items-start mb-2">
-                      <Badge
-                     bg='success'
-                      >
-                        <i className="bi bi-person me-1"></i>
-                        {nota.usuario?.nombre || 'Sistema'}
-                      </Badge>
-                      <small style={{ color: '#999', fontSize: '0.8rem' }}>
-                        <i className="bi bi-clock me-1"></i>
-                        {formatoFechaHora(nota.fecha)}
-                      </small>
+                      <Badge bg="success"><i className="bi bi-person me-1"></i>{nota.usuario?.nombre || 'Sistema'}</Badge>
+                      <small style={{ color: '#999', fontSize: '0.8rem' }}><i className="bi bi-clock me-1"></i>{formatoFechaHora(nota.fecha)}</small>
                     </div>
-                    <p className="mb-0" style={{ color: '#333', fontSize: '0.9rem', lineHeight: '1.5' }}>
-                      {nota.texto}
-                    </p>
+                    <p className="mb-0" style={{ color: '#333', fontSize: '0.9rem', lineHeight: '1.5' }}>{nota.texto}</p>
                   </div>
                 ))}
               </div>
             </Modal.Body>
-
             <Modal.Footer style={{ borderTop: '1px solid #e5e5e5' }}>
-              <small style={{ color: '#999' }}>
-                Total de notas: {notaSeleccionada.notas.length}
-              </small>
-              <button
-                onClick={() => setNotaSeleccionada(null)}
-                style={{
-                  backgroundColor: '#3483FA',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '8px 20px',
-                  fontWeight: '500',
-                  cursor: 'pointer'
-                }}
-              >
-                Cerrar
-              </button>
+              <small style={{ color: '#999' }}>Total de notas: {notaSeleccionada.notas.length}</small>
+              <button onClick={() => setNotaSeleccionada(null)} style={{ backgroundColor: '#3483FA', color: '#fff', border: 'none', borderRadius: '6px', padding: '8px 20px', fontWeight: '500', cursor: 'pointer' }}>Cerrar</button>
             </Modal.Footer>
           </>
         )}

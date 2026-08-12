@@ -64,7 +64,7 @@ export const CardLogin = () => {
         if (emailTrimmed !== "" && passwordTrimmed === "") {
             setIsLoading(true);
             try {
-                console.log(emailTrimmed)
+                //console.log(emailTrimmed)
                 await firstLogin(emailTrimmed, navigate);
                 showAlert('¡Te damosla bienvenida a tu primer acceso!', 'success');
             } catch (error) {

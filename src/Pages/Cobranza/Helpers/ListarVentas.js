@@ -27,7 +27,6 @@ export const listarVentas = async (filtros = {}) => {
 
     const url = `/cobranza/ventas${params.toString() ? '?' + params.toString() : ''}`;
     
-    //console.log('🔍 Buscando ventas:', url);
 
     const resp = await authApi.get(url);
 

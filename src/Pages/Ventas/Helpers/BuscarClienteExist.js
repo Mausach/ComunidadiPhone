@@ -7,11 +7,8 @@ export const buscarCliente = async (dni) => {
       throw new Error('El DNI debe tener 8 dígitos');
     }
 
-    console.log('🔍 Buscando cliente con DNI:', dni);
-
     const resp = await authApi.get(`/vtas/buscar-cliente/${dni}`);
 
-    console.log('📥 Respuesta del backend:', resp.data);
 
     if (resp.data?.ok && resp.data?.data) {
       return {

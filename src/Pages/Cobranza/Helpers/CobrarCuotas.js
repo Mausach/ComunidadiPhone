@@ -29,7 +29,6 @@ export const cobrarCuotas = async (data) => {
       }
     }
 
-    console.log('💳 Cobrando cuotas:', data);
 
     const resp = await authApi.post('/cobranza/cobrar-cuotas', data);
 

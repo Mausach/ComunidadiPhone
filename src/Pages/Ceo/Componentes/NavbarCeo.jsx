@@ -3,7 +3,7 @@
 import React from 'react';
 import { Navbar, Nav, Container, Dropdown } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-import logo from '../../../assets/logo_.jpeg';
+import logo from '../../../assets/logo.png';
 
 export const NavBarCeo = ({ usuario, vistaActiva, onCambiarVista }) => {
   const navigate = useNavigate();
@@ -13,7 +13,7 @@ export const NavBarCeo = ({ usuario, vistaActiva, onCambiarVista }) => {
     { label: 'Reportes', icon: 'bi-graph-up-arrow', vista: 'reportes' },
     { label: 'Historial', icon: 'bi-clock-history', vista: 'historial-cuotas' },
     { label: 'Eq. Canje', icon: 'bi-arrow-left-right', vista: 'equipos-canjeados' },
-
+    { label: 'Stock', icon: 'bi-box-seam', vista: 'stock' },
   ];
 
   const handleLogout = () => {
@@ -40,7 +40,6 @@ export const NavBarCeo = ({ usuario, vistaActiva, onCambiarVista }) => {
             alt="Logo"
             src={logo}
             width="50"
-
             className="d-inline-block align-top"
           />
           <span className="fw-bold" style={{ color: '#0F488B', fontSize: '1.1rem' }}>

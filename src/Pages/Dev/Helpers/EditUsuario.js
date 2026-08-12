@@ -33,7 +33,7 @@ export const actualizarUsuario = async (userData, setRefreshData, navigate) => {
       // password: datosActualizar.password || undefined
     };
 
-    console.log('Enviando datos al backend:', payload);
+   
 
     // Realizar la petición al backend
     const resp = await authApi.put('/admin/update-user', payload);

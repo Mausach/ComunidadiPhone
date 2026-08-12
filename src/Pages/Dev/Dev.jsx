@@ -1,19 +1,26 @@
 // Dev/index.jsx
 import React, { useEffect, useState } from 'react';
 import { Button, ListGroup, Spinner, Alert, Form, Container, Row, Col, Badge, Card, InputGroup } from 'react-bootstrap';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { NavBarDev } from './Componentes/NavBarDev';
 import { CargarUsuarios } from './Helpers/CargarUsuarios';
 import { changeEstadoUsuario } from './Helpers/CambiarEstadoUsuario';
 import { ModalDetallesUsuario } from './Componentes/ModalDetallesUsuario';
 import { ModalCrearUsuario } from './Componentes/ModalCrearUsuario';
 
-
 export const Dev = () => {
   const location = useLocation();
-  const usuario = location.state;
+  const usuario = location.state?.user || JSON.parse(localStorage.getItem('user') || '{}');
   const navigate = useNavigate();
 
+  // ==========================================
+  // ESTADOS DE NAVEGACIÓN
+  // ==========================================
+  const [vistaActiva, setVistaActiva] = useState('dashboard');
+
+  // ==========================================
+  // ESTADOS DE USUARIOS
+  // ==========================================
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -27,6 +34,17 @@ export const Dev = () => {
     message: '',
     variant: 'danger'
   });
+
+  // ==========================================
+  // VERIFICACIÓN DE USUARIO
+  // ==========================================
+  if (!usuario || !usuario.rol) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (usuario.rol !== 'dev') {
+    return <Navigate to="/" replace />;
+  }
 
   const showAlert = (message, variant = 'danger') => {
     setAlert({
@@ -72,17 +90,6 @@ export const Dev = () => {
       clearTimeout(timeoutId);
     };
   }, [refreshData]);
-
-  if (loading) {
-    return (
-      <div>
-        <NavBarDev />
-        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '50vh' }}>
-          <Spinner animation="border" variant="primary" className="mt-5" />
-        </div>
-      </div>
-    );
-  }
 
   const handleCloseDetailsModal = () => setShowDetailsModal(false);
 
@@ -139,14 +146,44 @@ export const Dev = () => {
     return colors[rol] || '#6c757d';
   };
 
-  return (
-    <div>
-      <NavBarDev />
+  // ==========================================
+  // PLACEHOLDERS PARA OTRAS VISTAS
+  // ==========================================
+  const DashboardDev = () => (
+    <div className="p-4">
+      <h3>Panel Dev</h3>
+      <p>Bienvenido, {usuario?.nombre}</p>
+    </div>
+  );
 
+  const VentasPlaceholder = () => (
+    <div className="p-4"><h3>Ventas</h3><p>Panel de ventas - En desarrollo</p></div>
+  );
+
+  const CobranzaPlaceholder = () => (
+    <div className="p-4"><h3>Cobranza</h3><p>Panel de cobranza - En desarrollo</p></div>
+  );
+
+  const ReportesPlaceholder = () => (
+    <div className="p-4"><h3>Reportes</h3><p>Panel de reportes - En desarrollo</p></div>
+  );
+
+  // ==========================================
+  // VISTA DE USUARIOS
+  // ==========================================
+  const VistaUsuarios = () => {
+    if (loading) {
+      return (
+        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '50vh' }}>
+          <Spinner animation="border" variant="primary" className="mt-5" />
+        </div>
+      );
+    }
+
+    return (
       <Container fluid className="py-4">
         <Row>
           <Col>
-            {/* Header */}
             <div className="d-flex justify-content-between align-items-center mb-4">
               <div>
                 <h2 className="fw-bold mb-1" style={{ color: '#1a1a1a' }}>
@@ -162,7 +199,6 @@ export const Dev = () => {
               </Badge>
             </div>
 
-            {/* Alertas */}
             {alert.show && (
               <Alert
                 variant={alert.variant}
@@ -174,9 +210,7 @@ export const Dev = () => {
                 }}
               >
                 <i className={`bi bi-${alert.variant === 'success' ? 'check-circle' : 'x-circle'} me-2`}></i>
-                <span className="flex-grow-1">
-                  {alert.message}
-                </span>
+                <span className="flex-grow-1">{alert.message}</span>
                 <Button
                   variant="link"
                   className="p-0 ms-2 text-decoration-none"
@@ -188,15 +222,11 @@ export const Dev = () => {
               </Alert>
             )}
 
-            {/* Búsqueda y acciones */}
             <Row className="mb-4">
               <Col md={6} className="mb-2 mb-md-0">
                 <Form.Group>
                   <InputGroup className="border rounded-3 overflow-hidden">
-                    <InputGroup.Text
-                      className="border-0 bg-transparent ps-3"
-                      style={{ color: '#6c757d' }}
-                    >
+                    <InputGroup.Text className="border-0 bg-transparent ps-3" style={{ color: '#6c757d' }}>
                       <i className="bi bi-search"></i>
                     </InputGroup.Text>
                     <Form.Control
@@ -205,11 +235,7 @@ export const Dev = () => {
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="border-0 py-2"
-                      style={{
-                        backgroundColor: 'transparent',
-                        boxShadow: 'none',
-                        fontSize: '0.95rem'
-                      }}
+                      style={{ backgroundColor: 'transparent', boxShadow: 'none', fontSize: '0.95rem' }}
                     />
                   </InputGroup>
                 </Form.Group>
@@ -219,11 +245,7 @@ export const Dev = () => {
                   variant="primary"
                   onClick={handleShowCreateModal}
                   className="rounded-3"
-                  style={{
-                    backgroundColor: '#3483FA',
-                    borderColor: '#3483FA',
-                    fontWeight: '500'
-                  }}
+                  style={{ backgroundColor: '#3483FA', borderColor: '#3483FA', fontWeight: '500' }}
                 >
                   <i className="bi bi-person-plus me-2"></i>
                   Nuevo Usuario
@@ -231,16 +253,11 @@ export const Dev = () => {
               </Col>
             </Row>
 
-            {/* Lista de usuarios */}
             {error ? (
               <Alert variant="danger" className="rounded-3">
                 <i className="bi bi-exclamation-triangle me-2"></i>
                 {error}
-                <Button
-                  variant="link"
-                  className="ms-2 text-decoration-none"
-                  onClick={() => setRefreshData(true)}
-                >
+                <Button variant="link" className="ms-2 text-decoration-none" onClick={() => setRefreshData(true)}>
                   Reintentar
                 </Button>
               </Alert>
@@ -263,80 +280,42 @@ export const Dev = () => {
                             onMouseLeave={(e) => e.target.style.backgroundColor = index % 2 === 0 ? 'transparent' : '#f8f9fa'}
                           >
                             <div className="d-flex align-items-center flex-wrap">
-                              {/* Avatar con iniciales */}
                               <div
                                 className="d-flex align-items-center justify-content-center rounded-circle me-3"
                                 style={{
-                                  width: '48px',
-                                  height: '48px',
+                                  width: '48px', height: '48px',
                                   backgroundColor: user.estado ? '#e6f4ea' : '#fde8e8',
                                   color: user.estado ? '#28a745' : '#dc3545',
-                                  fontWeight: 'bold',
-                                  fontSize: '1.1rem'
+                                  fontWeight: 'bold', fontSize: '1.1rem'
                                 }}
                               >
                                 {user.nombre?.charAt(0)}{user.apellido?.charAt(0)}
                               </div>
-
-                              {/* Información principal */}
                               <div className="flex-grow-1">
                                 <div className="d-flex align-items-center gap-2 flex-wrap">
                                   <span className="fw-semibold" style={{ fontSize: '1rem' }}>
                                     {user.nombre} {user.apellido}
                                   </span>
-                                  <Badge
-                                    bg={user.estado ? 'success' : 'secondary'}
-                                    className="rounded-pill px-2 py-1"
-                                    style={{ fontSize: '0.65rem' }}
-                                  >
+                                  <Badge bg={user.estado ? 'success' : 'secondary'} className="rounded-pill px-2 py-1" style={{ fontSize: '0.65rem' }}>
                                     {user.estado ? 'Activo' : 'Inactivo'}
                                   </Badge>
                                   <Badge
-                                    style={{
-                                      backgroundColor: getRolColor(user.rol),
-                                      fontSize: '0.65rem',
-                                      padding: '4px 8px'
-                                    }}
+                                    style={{ backgroundColor: getRolColor(user.rol), fontSize: '0.65rem', padding: '4px 8px' }}
                                     className="rounded-pill"
                                   >
                                     <i className={`${getRolIcon(user.rol)} me-1`}></i>
                                     {user.rol}
                                   </Badge>
                                 </div>
-
-                                {/* Datos primarios (DP) */}
                                 <div className="d-flex gap-3 mt-1 flex-wrap">
-                                  <small className="text-muted">
-                                    <i className="bi bi-envelope me-1"></i>
-                                    {user.email}
-                                  </small>
-                                  <small className="text-muted">
-                                    <i className="bi bi-telephone me-1"></i>
-                                    {user.telefono}
-                                  </small>
-                                  {user.dni && (
-                                    <small className="text-muted">
-                                      <i className="bi bi-card-text me-1"></i>
-                                      DNI: {user.dni}
-                                    </small>
-                                  )}
-                                  {user.localidad && (
-                                    <small className="text-muted">
-                                      <i className="bi bi-geo-alt me-1"></i>
-                                      {user.localidad}
-                                    </small>
-                                  )}
+                                  <small className="text-muted"><i className="bi bi-envelope me-1"></i>{user.email}</small>
+                                  <small className="text-muted"><i className="bi bi-telephone me-1"></i>{user.telefono}</small>
+                                  {user.dni && <small className="text-muted"><i className="bi bi-card-text me-1"></i>DNI: {user.dni}</small>}
+                                  {user.localidad && <small className="text-muted"><i className="bi bi-geo-alt me-1"></i>{user.localidad}</small>}
                                 </div>
                               </div>
-
-                              {/* Botones de acción */}
                               <div className="d-flex gap-1 ms-2">
-                                <Button
-                                  variant="link"
-                                  className="p-1 text-secondary"
-                                  onClick={() => handleShowDetailsModal(user)}
-                                  title="Ver detalles"
-                                >
+                                <Button variant="link" className="p-1 text-secondary" onClick={() => handleShowDetailsModal(user)} title="Ver detalles">
                                   <i className="bi bi-eye" style={{ fontSize: '1.1rem' }}></i>
                                 </Button>
                                 <Button
@@ -362,7 +341,6 @@ export const Dev = () => {
               </Card>
             )}
 
-            {/* Modal de Crear Usuario */}
             <ModalCrearUsuario
               show={showCreateModal}
               onHide={handleCloseCreateModal}
@@ -371,7 +349,6 @@ export const Dev = () => {
               usuario={usuario}
             />
 
-            {/* Modal de Detalles - Contiene el modal de edición dentro */}
             <ModalDetallesUsuario
               show={showDetailsModal}
               onHide={handleCloseDetailsModal}
@@ -385,51 +362,52 @@ export const Dev = () => {
           </Col>
         </Row>
       </Container>
+    );
+  };
 
-      {/* Estilos */}
+  // ==========================================
+  // RENDERIZADO POR VISTA
+  // ==========================================
+  const renderVista = () => {
+    switch (vistaActiva) {
+      case 'dashboard':
+        return <DashboardDev />;
+      case 'usuarios':
+        return <VistaUsuarios />;
+      case 'ventas':
+        return <VentasPlaceholder />;
+      case 'cobranza':
+        return <CobranzaPlaceholder />;
+      case 'reportes':
+        return <ReportesPlaceholder />;
+      default:
+        return <DashboardDev />;
+    }
+  };
+
+  // ==========================================
+  // RENDERIZADO PRINCIPAL
+  // ==========================================
+  return (
+    <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
+      <NavBarDev 
+        usuario={usuario} 
+        vistaActiva={vistaActiva} 
+        onCambiarVista={setVistaActiva} 
+      />
+      <div>{renderVista()}</div>
+
       <style>{`
         @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
         }
-
-        .alert-warning {
-          background-color: #fef6e6;
-          color: #856404;
-          border-left: 4px solid #ffa900;
-        }
-
-        .alert-danger {
-          background-color: #fde8e8;
-          color: #721c24;
-          border-left: 4px solid #dc3545;
-        }
-
-        .alert-success {
-          background-color: #e6f4ea;
-          color: #155724;
-          border-left: 4px solid #28a745;
-        }
-
-        .alert-info {
-          background-color: #e6f3ff;
-          color: #004085;
-          border-left: 4px solid #17a2b8;
-        }
-
-        .bi {
-          font-size: 1.1rem;
-        }
-
-        .list-group-item {
-          transition: all 0.2s ease;
-        }
+        .alert-warning { background-color: #fef6e6; color: #856404; border-left: 4px solid #ffa900; }
+        .alert-danger { background-color: #fde8e8; color: #721c24; border-left: 4px solid #dc3545; }
+        .alert-success { background-color: #e6f4ea; color: #155724; border-left: 4px solid #28a745; }
+        .alert-info { background-color: #e6f3ff; color: #004085; border-left: 4px solid #17a2b8; }
+        .bi { font-size: 1.1rem; }
+        .list-group-item { transition: all 0.2s ease; }
       `}</style>
     </div>
   );

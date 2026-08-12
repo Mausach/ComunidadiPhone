@@ -3,9 +3,8 @@ import authApi from "../../../Api/authApi";
 
 export const crearCliente = async (clienteData, setClienteData, showAlert, esExistente = false) => {
   try {
-    // Si es un cliente existente, no validamos duplicados en el backend
+
     if (esExistente) {
-      console.log('✅ Cliente existente, saltando validación de duplicados');
       
       if (setClienteData) {
         setClienteData(clienteData);
@@ -20,10 +19,6 @@ export const crearCliente = async (clienteData, setClienteData, showAlert, esExi
       };
     }
 
-    // ==========================================
-    // CREAR CLIENTE NUEVO
-    // ==========================================
-    console.log('🆕 Creando nuevo cliente:', clienteData);
 
     const payload = {
       nombre: clienteData.nombre.trim(),

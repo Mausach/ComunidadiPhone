@@ -4,7 +4,7 @@ import React from 'react';
 import { Navbar, Nav, Container, Dropdown } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 
-import logo from '../../../assets/logo_.jpeg';
+import logo from '../../../assets/logo.png';
 
 export const NavBarGC = ({ usuario, vistaActiva, onCambiarVista }) => {
   const navigate = useNavigate();
@@ -13,8 +13,8 @@ export const NavBarGC = ({ usuario, vistaActiva, onCambiarVista }) => {
     { label: 'Dashboard', icon: 'bi-speedometer2', vista: 'dashboard' },
     { label: 'Ventas', icon: 'bi-cart-plus', vista: 'ventas' },
     { label: 'Cobranza', icon: 'bi-cash-stack', vista: 'cobranza' },
-    { label: 'Reportes', icon: 'bi-graph-up', vista: 'reportes' },
     { label: 'Eq. Canje', icon: 'bi-arrow-left-right', vista: 'equipos-canjeados' },
+    { label: 'Stock', icon: 'bi-box-seam', vista: 'stock' },
   ];
 
   const handleLogout = () => {

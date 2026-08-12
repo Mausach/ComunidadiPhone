@@ -1,14 +1,22 @@
 // Cobranza/Helpers/cambiarEstadoCuota.js
 import authApi from "../../../Api/authApi";
 
-export const cambiarEstadoCuota = async ({ idVenta, numeroCuota, nuevoEstado, usuario, motivo }) => {
+export const cambiarEstadoCuota = async ({ 
+  idVenta, 
+  numeroCuota, 
+  nuevoEstado, 
+  usuario, 
+  motivo, 
+  metodoPago,
+  montoParcial   
+}) => {
   try {
     if (!idVenta) throw new Error('El ID de la venta es obligatorio');
     if (!numeroCuota) throw new Error('El número de cuota es obligatorio');
     if (!nuevoEstado) throw new Error('El nuevo estado es obligatorio');
     if (!usuario?.nombre) throw new Error('El nombre del usuario es obligatorio');
 
-    const estadosValidos = ["pagada", "pendiente","pago parcial", "no pagada"];
+    const estadosValidos = ["pagada", "pendiente", "pago parcial", "no pagada"];
     if (!estadosValidos.includes(nuevoEstado)) {
       throw new Error(`Estado no válido. Debe ser: ${estadosValidos.join(', ')}`);
     }
@@ -18,6 +26,17 @@ export const cambiarEstadoCuota = async ({ idVenta, numeroCuota, nuevoEstado, us
       usuario: { nombre: usuario.nombre },
       motivo: motivo || ''
     };
+
+    // Agregar método de pago si corresponde
+    if (nuevoEstado === 'pagada' || nuevoEstado === 'pago parcial') {
+      payload.metodoPago = metodoPago || 'efectivo';
+    }
+
+    // Agregar monto parcial si es pago parcial
+    if (nuevoEstado === 'pago parcial') {
+      payload.montoParcial = parseFloat(montoParcial) || 0;
+    }
+
 
     const resp = await authApi.put(`/cobranza/cuotas/${idVenta}/${numeroCuota}/estado`, payload);
 

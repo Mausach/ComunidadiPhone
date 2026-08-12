@@ -85,7 +85,7 @@ export const ModalEditarMontoCuota = ({
         numeroCuota: cuota.numeroCuota,
         nuevoMonto: monto,
         usuario: {
-          nombre: usuario?.nombre + ' ' + usuario?.apellido || 'Sistema'
+           nombre: usuario?.user.nombre + ' ' + usuario?.user.apellido || 'Sistema'
         },
         motivo: formData.motivo || 'Sin especificar'
       });
@@ -221,7 +221,7 @@ export const ModalEditarMontoCuota = ({
               className="rounded-3"
               disabled={loading}
               min={1}
-              step={100}
+              step="any"
             />
             <Form.Text className="text-muted small">
               <i className="bi bi-info-circle me-1"></i>

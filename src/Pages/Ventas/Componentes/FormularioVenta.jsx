@@ -1,5 +1,5 @@
 // Ventas/Componentes/FormularioVenta.jsx
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
     Form, Row, Col, Button, Card, InputGroup, Badge,
     Alert, Spinner
@@ -64,6 +64,7 @@ export const FormularioVenta = ({
     });
 
     const [nuevaNota, setNuevaNota] = useState('');
+    const alertRef = useRef(null);
 
     // Tipos de venta disponibles
     const tiposVenta = [
@@ -115,6 +116,12 @@ export const FormularioVenta = ({
             message,
             variant,
         });
+
+        setTimeout(() => {
+            if (alertRef.current) {
+                alertRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 100);
 
         setTimeout(() => {
             setAlert({ show: false, message: '', variant: 'danger' });
@@ -279,7 +286,6 @@ export const FormularioVenta = ({
         e.preventDefault();
         e.stopPropagation();
 
-        console.log('🔍 Iniciando validación del formulario...');
 
         // 1. Validar localidad
         if (!formData.localidad) {
@@ -353,7 +359,6 @@ export const FormularioVenta = ({
         // ==========================================
         // PREPARAR PAYLOAD
         // ==========================================
-        console.log('✅ Validaciones pasadas. Preparando payload...');
 
         const payload = {
             tipoVenta: formData.tipoVenta,
@@ -416,10 +421,12 @@ export const FormularioVenta = ({
             }))
         };
 
-        console.log('📤 Enviando payload:', payload);
 
-        // Enviar al padre
-        onSubmit(payload);
+        try {
+            await onSubmit(payload);
+        } catch (error) {
+            showAlert(error.message || 'Error al crear la venta', 'danger');
+        }
     };
 
     // ==========================================
@@ -460,6 +467,7 @@ export const FormularioVenta = ({
                 {/* Alertas */}
                 {alert.show && (
                     <Alert
+                        ref={alertRef}
                         variant={alert.variant}
                         className="d-flex align-items-center rounded-3 border-0 shadow-sm mb-3"
                         style={{
@@ -468,7 +476,7 @@ export const FormularioVenta = ({
                             animation: 'fadeIn 0.3s ease'
                         }}
                     >
-                        <i className={`bi bi-${alert.variant === 'success' ? 'check-circle' : 'x-circle'} me-2`}></i>
+                        <i className={`bi bi-${alert.variant === 'success' ? 'check-circle' : alert.variant === 'warning' ? 'exclamation-triangle' : 'x-circle'} me-2`}></i>
                         <span className="flex-grow-1">{alert.message}</span>
                         <Button
                             variant="link"
@@ -573,7 +581,7 @@ export const FormularioVenta = ({
                                         name="nombre"
                                         value={formData.producto.nombre}
                                         onChange={handleProductoChange}
-                                        placeholder="Ej: Samsung Galaxy S24 Ultra"
+                                        placeholder="Ej: iPhone "
                                         className="rounded-3"
                                         disabled={isLoading}
                                     />
@@ -587,7 +595,7 @@ export const FormularioVenta = ({
                                         name="modelo"
                                         value={formData.producto.modelo}
                                         onChange={handleProductoChange}
-                                        placeholder="Ej: SM-S928B"
+                                        placeholder="Ej: 13 pro max"
                                         className="rounded-3"
                                         disabled={isLoading}
                                     />
@@ -615,7 +623,7 @@ export const FormularioVenta = ({
                                         name="bateria"
                                         value={formData.producto.bateria}
                                         onChange={handleProductoChange}
-                                        placeholder="Ej: 5000mAh"
+                                        placeholder="Ej: 80%"
                                         className="rounded-3"
                                         disabled={isLoading}
                                     />
@@ -772,9 +780,7 @@ export const FormularioVenta = ({
                                         </Col>
                                         <Col xs={12} md={4} className="mt-2 mt-md-0">
                                             <small className="text-muted d-block">Frecuencia</small>
-                                            <Badge
-                                             
-                                            >
+                                            <Badge bg="dark">
                                                 <i className="bi bi-arrow-repeat me-1"></i>
                                                 {frecuenciaSeleccionada?.label}
                                             </Badge>
@@ -1149,7 +1155,7 @@ export const FormularioVenta = ({
                     )}
 
                     {/* ==========================================
-                        SECCIÓN: NOTAS Y OBSERVACIONES (NUEVO)
+                        SECCIÓN: NOTAS Y OBSERVACIONES
                         ========================================== */}
                     <div className="border rounded-3 p-3 mb-4" style={{ backgroundColor: '#f8f9fa' }}>
                         <h6 className="fw-bold text-secondary mb-3" style={{ fontSize: '0.85rem' }}>
@@ -1189,40 +1195,22 @@ export const FormularioVenta = ({
                             </Form.Text>
                         </Form.Group>
 
-                        {/* Lista de notas agregadas */}
                         {formData.notas.length > 0 && (
                             <div className="mt-3">
                                 {formData.notas.map((nota, index) => (
-                                    <div
-                                        key={index}
-                                        className="d-flex align-items-start p-2 mb-2 bg-white rounded-3 border"
-                                    >
+                                    <div key={index} className="d-flex align-items-start p-2 mb-2 bg-white rounded-3 border">
                                         <i className="bi bi-chat-left-text me-2 mt-1" style={{ color: '#3483FA' }}></i>
                                         <div className="flex-grow-1">
-                                            <small style={{ color: '#333', fontSize: '0.85rem' }}>
-                                                {nota.texto}
-                                            </small>
+                                            <small style={{ color: '#333', fontSize: '0.85rem' }}>{nota.texto}</small>
                                             <div className="d-flex justify-content-between mt-1">
+                                                <small style={{ color: '#999', fontSize: '0.7rem' }}>{nota.usuario?.nombre || 'Vendedor'}</small>
                                                 <small style={{ color: '#999', fontSize: '0.7rem' }}>
-                                                    {nota.usuario?.nombre || 'Vendedor'}
-                                                </small>
-                                                <small style={{ color: '#999', fontSize: '0.7rem' }}>
-                                                    {new Date(nota.fecha).toLocaleString('es-AR', {
-                                                        day: '2-digit',
-                                                        month: '2-digit',
-                                                        hour: '2-digit',
-                                                        minute: '2-digit'
-                                                    })}
+                                                    {new Date(nota.fecha).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                                                 </small>
                                             </div>
                                         </div>
-                                        <Button
-                                            variant="link"
-                                            className="p-0 ms-2 text-decoration-none"
-                                            style={{ color: '#dc3545', fontSize: '0.8rem' }}
-                                            onClick={() => handleEliminarNota(index)}
-                                            disabled={isLoading}
-                                        >
+                                        <Button variant="link" className="p-0 ms-2 text-decoration-none" style={{ color: '#dc3545', fontSize: '0.8rem' }}
+                                            onClick={() => handleEliminarNota(index)} disabled={isLoading}>
                                             <i className="bi bi-trash3"></i>
                                         </Button>
                                     </div>
@@ -1243,9 +1231,7 @@ export const FormularioVenta = ({
                             <Col md={6}>
                                 <div className="p-2 bg-white rounded-3">
                                     <small className="text-muted d-block">Cliente</small>
-                                    <span className="fw-semibold">
-                                        {clienteData?.nombreCompleto || clienteData?.nombre + ' ' + clienteData?.apellido}
-                                    </span>
+                                    <span className="fw-semibold">{clienteData?.nombreCompleto || clienteData?.nombre + ' ' + clienteData?.apellido}</span>
                                 </div>
                             </Col>
                             <Col md={6}>
@@ -1257,9 +1243,7 @@ export const FormularioVenta = ({
                             <Col md={4}>
                                 <div className="p-2 bg-white rounded-3">
                                     <small className="text-muted d-block">Tipo de Venta</small>
-                                    <span className="fw-semibold">
-                                        {tiposVenta.find(t => t.value === formData.tipoVenta)?.label || formData.tipoVenta}
-                                    </span>
+                                    <span className="fw-semibold">{tiposVenta.find(t => t.value === formData.tipoVenta)?.label || formData.tipoVenta}</span>
                                 </div>
                             </Col>
                             <Col md={4}>
@@ -1271,9 +1255,7 @@ export const FormularioVenta = ({
                             <Col md={4}>
                                 <div className="p-2 bg-white rounded-3">
                                     <small className="text-muted d-block">Fecha</small>
-                                    <span className="fw-semibold">
-                                        {formData.fechaRealizada ? new Date(formData.fechaRealizada).toLocaleDateString('es-AR') : 'No seleccionada'}
-                                    </span>
+                                    <span className="fw-semibold">{formData.fechaRealizada ? new Date(formData.fechaRealizada).toLocaleDateString('es-AR') : 'No seleccionada'}</span>
                                 </div>
                             </Col>
                             <Col md={4}>
@@ -1299,9 +1281,7 @@ export const FormularioVenta = ({
                                     <Col md={4}>
                                         <div className="p-2 bg-white rounded-3">
                                             <small className="text-muted d-block">Cuotas</small>
-                                            <span className="fw-semibold">
-                                                {formData.cantidadCuotas} x ${formData.montoCuota.toLocaleString()}
-                                            </span>
+                                            <span className="fw-semibold">{formData.cantidadCuotas} x ${formData.montoCuota.toLocaleString()}</span>
                                         </div>
                                     </Col>
                                     <Col md={4}>
@@ -1331,44 +1311,16 @@ export const FormularioVenta = ({
 
                     {/* Botones de acción */}
                     <div className="d-flex gap-2 justify-content-end pt-3 mt-3 border-top">
-                        <Button
-                            variant="secondary"
-                            onClick={() => window.history.back()}
-                            className="rounded-3"
-                            disabled={isLoading}
-                        >
-                            <i className="bi bi-arrow-left me-1"></i>
-                            Volver
+                        <Button variant="secondary" onClick={() => window.history.back()} className="rounded-3" disabled={isLoading}>
+                            <i className="bi bi-arrow-left me-1"></i>Volver
                         </Button>
-                        <Button
-                            variant="primary"
-                            type="submit"
-                            className="rounded-3 px-4"
-                            style={{
-                                backgroundColor: '#3483FA',
-                                borderColor: '#3483FA',
-                                fontWeight: '500',
-                                minWidth: '180px'
-                            }}
-                            disabled={isLoading}
-                        >
+                        <Button variant="primary" type="submit" className="rounded-3 px-4"
+                            style={{ backgroundColor: '#3483FA', borderColor: '#3483FA', fontWeight: '500', minWidth: '180px' }}
+                            disabled={isLoading}>
                             {isLoading ? (
-                                <>
-                                    <Spinner
-                                        as="span"
-                                        animation="border"
-                                        size="sm"
-                                        role="status"
-                                        aria-hidden="true"
-                                        className="me-2"
-                                    />
-                                    Procesando...
-                                </>
+                                <><Spinner as="span" animation="border" size="sm" className="me-2" />Procesando...</>
                             ) : (
-                                <>
-                                    <i className="bi bi-check-circle me-2"></i>
-                                    Confirmar Venta
-                                </>
+                                <><i className="bi bi-check-circle me-2"></i>Confirmar Venta</>
                             )}
                         </Button>
                     </div>
@@ -1377,39 +1329,13 @@ export const FormularioVenta = ({
 
             <style>{`
                 @keyframes fadeIn {
-                    from {
-                        opacity: 0;
-                        transform: translateY(-10px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
+                    from { opacity: 0; transform: translateY(-10px); }
+                    to { opacity: 1; transform: translateY(0); }
                 }
-
-                .alert-warning {
-                    background-color: #fef6e6;
-                    color: #856404;
-                    border-left: 4px solid #ffa900;
-                }
-
-                .alert-danger {
-                    background-color: #fde8e8;
-                    color: #721c24;
-                    border-left: 4px solid #dc3545;
-                }
-
-                .alert-success {
-                    background-color: #e6f4ea;
-                    color: #155724;
-                    border-left: 4px solid #28a745;
-                }
-
-                .alert-info {
-                    background-color: #e6f3ff;
-                    color: #004085;
-                    border-left: 4px solid #17a2b8;
-                }
+                .alert-warning { background-color: #fef6e6; color: #856404; border-left: 4px solid #ffa900; }
+                .alert-danger { background-color: #fde8e8; color: #721c24; border-left: 4px solid #dc3545; }
+                .alert-success { background-color: #e6f4ea; color: #155724; border-left: 4px solid #28a745; }
+                .alert-info { background-color: #e6f3ff; color: #004085; border-left: 4px solid #17a2b8; }
             `}</style>
         </Card>
     );

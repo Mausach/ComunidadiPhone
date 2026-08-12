@@ -9,6 +9,7 @@ import { NavBarGC } from './Componentes/NavBarGC';
 import { Ventas } from '../Ventas/Ventas';
 import { Cobranza } from '../Cobranza/Cobranza';
 import { EquiposCanjeados } from '../Ceo/Componentes/EquiposCanjeados';
+import { StockEquipos } from '../Ceo/Componentes/StockEquipos';
 
 
 // Placeholders para lo que falta crear
@@ -29,7 +30,7 @@ const DashboardGerCom = ({ usuario }) => (
 export const Ger_Comercial = () => {
   const location = useLocation();
   const usuario = location.state?.user || JSON.parse(localStorage.getItem('user') || '{}');
-  
+
   // Estado para controlar qué vista se muestra
   const [vistaActiva, setVistaActiva] = useState('dashboard');
 
@@ -51,11 +52,13 @@ export const Ger_Comercial = () => {
       case 'ventas':
         return <Ventas mostrarNavbar={false} />;
       case 'cobranza':
-        return <Cobranza />;
+        return <Cobranza mostrarNavbar={false} />;
       case 'reportes':
         return <Reportes />;
       case 'equipos-canjeados':
         return <EquiposCanjeados />;
+      case 'stock':
+        return <StockEquipos />;
       default:
         return <DashboardGerCom usuario={usuario} />;
     }

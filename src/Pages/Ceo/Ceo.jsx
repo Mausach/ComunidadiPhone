@@ -8,6 +8,7 @@ import { NavBarCeo } from './Componentes/NavbarCeo';
 import { ReportesCeo } from './Componentes/ReportesCeo';
 import { HistorialCuotas } from './Componentes/HistorialPorCliente';
 import { EquiposCanjeados } from './Componentes/EquiposCanjeados';
+import { StockEquipos } from './Componentes/StockEquipos';
 
 // Placeholders para las vistas
 
@@ -26,16 +27,16 @@ export const Ceo = () => {
   const [vistaActiva, setVistaActiva] = useState('dashboard');
 
   if (!usuario || !usuario.rol) {
-    console.log('⛔ No hay usuario');
+    
     return <Navigate to="/" replace />;
   }
 
   if (usuario.rol !== 'ceo') {
-    console.log('⛔ Rol incorrecto:', usuario.rol, '- Se esperaba: ceo');
+    
     return <Navigate to="/" replace />;
   }
 
-  console.log('✅ CEO renderizado - Usuario:', usuario);
+ 
 
   const renderVista = () => {
     switch (vistaActiva) {
@@ -47,7 +48,9 @@ export const Ceo = () => {
         return <HistorialCuotas />;
       case 'equipos-canjeados':
         return <EquiposCanjeados />;
-      
+      case 'stock':
+        return <StockEquipos />;
+
       default:
         return <DashboardCeo usuario={usuario} />;
     }

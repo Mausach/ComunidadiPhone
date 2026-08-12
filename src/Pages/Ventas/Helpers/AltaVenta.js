@@ -3,7 +3,6 @@ import authApi from "../../../Api/authApi";
 
 export const crearVenta = async (ventaData) => {
   try {
-    console.log('📦 Creando venta:', ventaData);
 
     const resp = await authApi.post('/vtas/ventas-procesar', ventaData);
 

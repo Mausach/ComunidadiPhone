@@ -4,6 +4,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Container, Row, Col, Card, Form, InputGroup, Badge, Button, Spinner, Alert, Modal } from 'react-bootstrap';
 import { listarStock, crearEquipo, editarEquipo, eliminarEquipo } from '../Helpers/stockApi';
 
+// Localidades disponibles (las mismas que usamos en ventas)
+const localidades = [
+  'Santiago Capital',
+  'La Banda',
+  'Añatuya',
+  'Monte Quemado'
+];
+
 export const StockEquipos = () => {
   const [equipos, setEquipos] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -20,6 +28,7 @@ export const StockEquipos = () => {
   const [equipoEditar, setEquipoEditar] = useState(null);
   const [formData, setFormData] = useState({
     nombre: '', modelo: '', imei: '', color: '', bateria: '',
+    localidad: '', // 🆕
     estado: 'sellado', precioCompra: 0, precioVenta: 0,
     proveedor: { nombre: '', telefono: '' },
     disponible: true
@@ -56,7 +65,8 @@ export const StockEquipos = () => {
       const t = busqueda.toLowerCase().trim();
       resultado = resultado.filter(e =>
         e.nombre?.toLowerCase().includes(t) || e.modelo?.toLowerCase().includes(t) ||
-        e.imei?.includes(t) || e.color?.toLowerCase().includes(t)
+        e.imei?.includes(t) || e.color?.toLowerCase().includes(t) ||
+        e.localidad?.toLowerCase().includes(t) // 🆕
       );
     }
     if (filtroEstado !== 'todas') resultado = resultado.filter(e => e.estado === filtroEstado);
@@ -69,6 +79,7 @@ export const StockEquipos = () => {
     setEquipoEditar(null);
     setFormData({
       nombre: '', modelo: '', imei: '', color: '', bateria: '',
+      localidad: '', // 🆕
       estado: 'sellado', precioCompra: 0, precioVenta: 0,
       proveedor: { nombre: '', telefono: '' },
       disponible: true
@@ -80,7 +91,9 @@ export const StockEquipos = () => {
     setEquipoEditar(equipo);
     setFormData({
       nombre: equipo.nombre || '', modelo: equipo.modelo || '', imei: equipo.imei || '',
-      color: equipo.color || '', bateria: equipo.bateria || '', estado: equipo.estado || 'sellado',
+      color: equipo.color || '', bateria: equipo.bateria || '',
+      localidad: equipo.localidad || '', // 🆕
+      estado: equipo.estado || 'sellado',
       precioCompra: equipo.precioCompra || 0, precioVenta: equipo.precioVenta || 0,
       proveedor: {
         nombre: equipo.proveedor?.nombre || '',
@@ -116,6 +129,7 @@ export const StockEquipos = () => {
         imei: formData.imei.trim(),
         color: formData.color.trim(),
         bateria: formData.bateria.trim(),
+        localidad: formData.localidad, // 🆕
         estado: formData.estado,
         precioCompra: parseFloat(formData.precioCompra) || 0,
         precioVenta: parseFloat(formData.precioVenta),
@@ -125,7 +139,6 @@ export const StockEquipos = () => {
         }
       };
 
-      // Solo incluir disponible si es editar
       if (equipoEditar) {
         payload.disponible = formData.disponible;
       }
@@ -197,7 +210,7 @@ export const StockEquipos = () => {
             <Col md={4}>
               <InputGroup>
                 <InputGroup.Text style={{ backgroundColor: '#f8f9fa', border: '1px solid #e5e5e5' }}><i className="bi bi-search" style={{ color: '#999' }}></i></InputGroup.Text>
-                <Form.Control placeholder="Buscar por nombre, modelo, IMEI..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
+                <Form.Control placeholder="Buscar por nombre, modelo, IMEI, localidad..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
                   style={{ border: '1px solid #e5e5e5', fontSize: '0.9rem', padding: '10px 12px' }} />
               </InputGroup>
             </Col>
@@ -240,6 +253,7 @@ export const StockEquipos = () => {
                   <tr>
                     <th style={{ color: '#666', fontSize: '0.8rem', fontWeight: '600' }}>Equipo</th>
                     <th style={{ color: '#666', fontSize: '0.8rem', fontWeight: '600' }}>IMEI</th>
+                    <th style={{ color: '#666', fontSize: '0.8rem', fontWeight: '600' }}>Localidad</th>
                     <th style={{ color: '#666', fontSize: '0.8rem', fontWeight: '600' }}>Estado</th>
                     <th style={{ color: '#666', fontSize: '0.8rem', fontWeight: '600' }}>P. Compra</th>
                     <th style={{ color: '#666', fontSize: '0.8rem', fontWeight: '600' }}>P. Venta</th>
@@ -256,6 +270,7 @@ export const StockEquipos = () => {
                         <small style={{ color: '#999' }}>{eq.modelo || '-'} · {eq.color || '-'}</small>
                       </td>
                       <td style={{ color: '#666', fontSize: '0.85rem' }}>{eq.imei || '-'}</td>
+                      <td style={{ color: '#666', fontSize: '0.85rem' }}>{eq.localidad || '-'}</td>
                       <td>{badgeEstado(eq.estado)}</td>
                       <td style={{ color: '#666' }}>{formatoMoneda(eq.precioCompra)}</td>
                       <td style={{ fontWeight: '500', color: '#198754' }}>{formatoMoneda(eq.precioVenta)}</td>
@@ -284,9 +299,7 @@ export const StockEquipos = () => {
         </Card>
       )}
 
-      {/* ==========================================
-          MODAL CREAR / EDITAR - ESTILO MERCADO PAGO
-          ========================================== */}
+      {/* Modal Crear/Editar */}
       <Modal show={showModal} onHide={() => setShowModal(false)} size="lg" centered className="stock-modal">
         <Modal.Header closeButton className="border-0 pb-0">
           <Modal.Title className="fw-bold" style={{ color: '#1a1a1a' }}>
@@ -296,7 +309,7 @@ export const StockEquipos = () => {
         </Modal.Header>
         <Form onSubmit={handleGuardar}>
           <Modal.Body className="pt-3">
-            {/* Sección: Datos del Equipo */}
+            {/* Datos del Equipo */}
             <div className="border rounded-3 p-3 mb-4" style={{ backgroundColor: '#f8f9fa' }}>
               <h6 className="fw-bold text-secondary mb-3" style={{ fontSize: '0.85rem' }}>
                 <i className="bi bi-phone me-2"></i>Datos del Equipo
@@ -304,11 +317,11 @@ export const StockEquipos = () => {
               <Row className="g-3">
                 <Col md={6}>
                   <Form.Label className="small fw-semibold text-secondary">Nombre <span className="text-danger">*</span></Form.Label>
-                  <Form.Control name="nombre" value={formData.nombre} onChange={handleChange} className="rounded-3" placeholder="Ej: Samsung Galaxy S24" disabled={saving} />
+                  <Form.Control name="nombre" value={formData.nombre} onChange={handleChange} className="rounded-3" placeholder="Ej: Iphone" disabled={saving} />
                 </Col>
                 <Col md={6}>
                   <Form.Label className="small fw-semibold text-secondary">Modelo</Form.Label>
-                  <Form.Control name="modelo" value={formData.modelo} onChange={handleChange} className="rounded-3" placeholder="Ej: SM-S928B" disabled={saving} />
+                  <Form.Control name="modelo" value={formData.modelo} onChange={handleChange} className="rounded-3" placeholder="Ej: 13 pro max" disabled={saving} />
                 </Col>
                 <Col md={4}>
                   <Form.Label className="small fw-semibold text-secondary">IMEI</Form.Label>
@@ -320,12 +333,22 @@ export const StockEquipos = () => {
                 </Col>
                 <Col md={4}>
                   <Form.Label className="small fw-semibold text-secondary">Batería</Form.Label>
-                  <Form.Control name="bateria" value={formData.bateria} onChange={handleChange} className="rounded-3" placeholder="Ej: 5000mAh" disabled={saving} />
+                  <Form.Control name="bateria" value={formData.bateria} onChange={handleChange} className="rounded-3" placeholder="Ej: 85%" disabled={saving} />
+                </Col>
+                {/* 🆕 Localidad */}
+                <Col md={6}>
+                  <Form.Label className="small fw-semibold text-secondary">
+                    <i className="bi bi-geo-alt me-1"></i>Localidad de destino
+                  </Form.Label>
+                  <Form.Select name="localidad" value={formData.localidad} onChange={handleChange} className="rounded-3" disabled={saving}>
+                    <option value="">Seleccionar localidad</option>
+                    {localidades.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+                  </Form.Select>
                 </Col>
               </Row>
             </div>
 
-            {/* Sección: Estado y Precios */}
+            {/* Estado y Precios */}
             <div className="border rounded-3 p-3 mb-4" style={{ backgroundColor: '#f8f9fa' }}>
               <h6 className="fw-bold text-secondary mb-3" style={{ fontSize: '0.85rem' }}>
                 <i className="bi bi-tag me-2"></i>Estado y Precios
@@ -351,7 +374,6 @@ export const StockEquipos = () => {
                     <Form.Control type="number" name="precioVenta" value={formData.precioVenta} onChange={handleChange} className="rounded-end-3" disabled={saving} min={0} step={100} />
                   </InputGroup>
                 </Col>
-                {/* Disponible (solo editar) */}
                 {equipoEditar && (
                   <Col md={4}>
                     <Form.Label className="small fw-semibold text-secondary">Disponibilidad</Form.Label>
@@ -364,7 +386,7 @@ export const StockEquipos = () => {
               </Row>
             </div>
 
-            {/* Sección: Proveedor (opcional) */}
+            {/* Proveedor */}
             <div className="border rounded-3 p-3 mb-3" style={{ backgroundColor: '#f8f9fa' }}>
               <h6 className="fw-bold text-secondary mb-3" style={{ fontSize: '0.85rem' }}>
                 <i className="bi bi-truck me-2"></i>Proveedor <Badge bg="secondary" className="ms-1" style={{ fontSize: '0.65rem' }}>Opcional</Badge>
@@ -382,12 +404,9 @@ export const StockEquipos = () => {
             </div>
           </Modal.Body>
           <Modal.Footer className="border-0 pt-0">
-            <Button variant="secondary" onClick={() => setShowModal(false)} className="rounded-3" disabled={saving}>
-              Cancelar
-            </Button>
+            <Button variant="secondary" onClick={() => setShowModal(false)} className="rounded-3" disabled={saving}>Cancelar</Button>
             <Button variant="primary" type="submit" className="rounded-3 px-4"
-              style={{ backgroundColor: '#3483FA', borderColor: '#3483FA', fontWeight: '500' }}
-              disabled={saving}>
+              style={{ backgroundColor: '#3483FA', borderColor: '#3483FA', fontWeight: '500' }} disabled={saving}>
               {saving ? <><Spinner size="sm" className="me-2" />Guardando...</> : <><i className="bi bi-check-circle me-2"></i>Guardar Equipo</>}
             </Button>
           </Modal.Footer>

@@ -1,8 +1,9 @@
 // src/Pages/Ceo/Componentes/EquiposCanjeados.jsx
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Container, Row, Col, Card, Form, InputGroup, Badge, Collapse, Spinner, Alert } from 'react-bootstrap';
+import { Container, Row, Col, Card, Form, InputGroup, Badge, Collapse, Spinner, Alert, Button } from 'react-bootstrap';
 import { obtenerEquiposCanjeados } from '../Helpers/ReportesMensuales';
+import { ModalEditarEquipoCanje } from './ModalEditarEquipoCanje';
 
 export const EquiposCanjeados = () => {
   // Estados
@@ -10,13 +11,17 @@ export const EquiposCanjeados = () => {
   const [totalesGenerales, setTotalesGenerales] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  
+
   // Filtros
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('todas');
-  
+
   // UI
   const [equiposExpandidos, setEquiposExpandidos] = useState({});
+
+  // Modal editar
+  const [showEditar, setShowEditar] = useState(false);
+  const [equipoSeleccionado, setEquipoSeleccionado] = useState(null);
 
   // Cargar datos
   useEffect(() => {
@@ -26,7 +31,7 @@ export const EquiposCanjeados = () => {
   const cargarDatos = async () => {
     setIsLoading(true);
     setError('');
-    
+
     try {
       const data = await obtenerEquiposCanjeados();
       setEquipos(data.equipos);
@@ -41,26 +46,25 @@ export const EquiposCanjeados = () => {
   // Filtrar equipos
   const equiposFiltrados = useMemo(() => {
     let resultado = equipos;
-    
-    // Búsqueda por texto
+
     if (busqueda.trim()) {
       const termino = busqueda.toLowerCase().trim();
-      resultado = resultado.filter(eq => 
+      resultado = resultado.filter(eq =>
         eq.nombre?.toLowerCase().includes(termino) ||
         eq.modelo?.toLowerCase().includes(termino) ||
         eq.imei?.includes(termino) ||
+        eq.localidad?.toLowerCase().includes(termino) || // 🆕
         eq.venta?.cliente?.nombre?.toLowerCase().includes(termino) ||
         eq.venta?.cliente?.apellido?.toLowerCase().includes(termino) ||
         eq.venta?.localidad?.toLowerCase().includes(termino) ||
         eq.venta?.vendedor?.toLowerCase().includes(termino)
       );
     }
-    
-    // Filtro por estado
+
     if (filtroEstado !== 'todas') {
       resultado = resultado.filter(eq => eq.estado === filtroEstado);
     }
-    
+
     return resultado;
   }, [equipos, busqueda, filtroEstado]);
 
@@ -69,6 +73,17 @@ export const EquiposCanjeados = () => {
       ...prev,
       [idEquipo]: !prev[idEquipo]
     }));
+  };
+
+  const handleEditar = (equipo) => {
+    setEquipoSeleccionado(equipo);
+    setShowEditar(true);
+  };
+
+  const handleEditarExitoso = () => {
+    setShowEditar(false);
+    setEquipoSeleccionado(null);
+    cargarDatos();
   };
 
   const formatoMoneda = (valor) => {
@@ -91,27 +106,18 @@ export const EquiposCanjeados = () => {
 
   const badgeEstado = (estado) => {
     const config = {
-      'excelente': { color: '#00a650', bg: '#e6f7ee', label: 'Excelente', icono: 'bi-star-fill' },
-      'bueno': { color: '#3483FA', bg: '#e8f0fe', label: 'Bueno', icono: 'bi-hand-thumbs-up-fill' },
-      'regular': { color: '#ff7733', bg: '#fff3ed', label: 'Regular', icono: 'bi-exclamation-circle-fill' },
-      'malo': { color: '#dc3545', bg: '#ffeaea', label: 'Malo', icono: 'bi-hand-thumbs-down-fill' }
+      'excelente': 'success',
+      'bueno': 'primary',
+      'regular': 'warning',
+      'malo': 'danger'
     };
-    const c = config[estado] || { color: '#666', bg: '#f5f5f5', label: estado, icono: 'bi-circle' };
-
-    return (
-      <Badge
-        style={{
-          
-          fontWeight: '500',
-          padding: '4px 10px',
-          borderRadius: '4px',
-          fontSize: '0.75rem'
-        }}
-      >
-        <i className={`${c.icono} me-1`}></i>
-        {c.label}
-      </Badge>
-    );
+    const labels = {
+      'excelente': 'Excelente',
+      'bueno': 'Bueno',
+      'regular': 'Regular',
+      'malo': 'Malo'
+    };
+    return <Badge bg={config[estado] || 'secondary'} className="text-capitalize">{labels[estado] || estado}</Badge>;
   };
 
   // Loading
@@ -127,18 +133,10 @@ export const EquiposCanjeados = () => {
   // Error
   if (error) {
     return (
-      <Alert 
-        variant="danger" 
-        className="shadow-sm border-0"
-        style={{ borderRadius: '8px' }}
-      >
+      <Alert variant="danger" className="shadow-sm border-0" style={{ borderRadius: '8px' }}>
         <i className="bi bi-exclamation-triangle me-2"></i>
         {error}
-        <button
-          onClick={cargarDatos}
-          className="btn btn-link btn-sm ms-3"
-          style={{ color: '#dc3545', textDecoration: 'underline' }}
-        >
+        <button onClick={cargarDatos} className="btn btn-link btn-sm ms-3" style={{ color: '#dc3545', textDecoration: 'underline' }}>
           Reintentar
         </button>
       </Alert>
@@ -193,18 +191,10 @@ export const EquiposCanjeados = () => {
             <Card className="h-100 shadow-sm border-0" style={{ borderRadius: '8px' }}>
               <Card.Body className="p-3 text-center">
                 <div className="d-flex justify-content-center gap-2 mb-1">
-                  <Badge bg='light' style={{ color: '#00a650', fontSize: '0.7rem' }}>
-                    {totalesGenerales.porEstado.excelente} E
-                  </Badge>
-                  <Badge bg='light' style={{ color: '#3483FA', fontSize: '0.7rem' }}>
-                    {totalesGenerales.porEstado.bueno} B
-                  </Badge>
-                  <Badge bg='light' style={{ color: '#ff7733', fontSize: '0.7rem' }}>
-                    {totalesGenerales.porEstado.regular} R
-                  </Badge>
-                  <Badge bg='light' style={{ color: '#dc3545', fontSize: '0.7rem' }}>
-                    {totalesGenerales.porEstado.malo} M
-                  </Badge>
+                  <Badge bg="success" style={{ fontSize: '0.7rem' }}>{totalesGenerales.porEstado.excelente} E</Badge>
+                  <Badge bg="primary" style={{ fontSize: '0.7rem' }}>{totalesGenerales.porEstado.bueno} B</Badge>
+                  <Badge bg="warning" text="dark" style={{ fontSize: '0.7rem' }}>{totalesGenerales.porEstado.regular} R</Badge>
+                  <Badge bg="danger" style={{ fontSize: '0.7rem' }}>{totalesGenerales.porEstado.malo} M</Badge>
                 </div>
                 <small style={{ color: '#999' }}>Por Estado</small>
               </Card.Body>
@@ -226,11 +216,7 @@ export const EquiposCanjeados = () => {
                   placeholder="Buscar por equipo, cliente, localidad, vendedor..."
                   value={busqueda}
                   onChange={(e) => setBusqueda(e.target.value)}
-                  style={{
-                    border: '1px solid #e5e5e5',
-                    fontSize: '0.9rem',
-                    padding: '10px 12px'
-                  }}
+                  style={{ border: '1px solid #e5e5e5', fontSize: '0.9rem', padding: '10px 12px' }}
                 />
               </InputGroup>
             </Col>
@@ -246,7 +232,9 @@ export const EquiposCanjeados = () => {
                 }}
               >
                 <option value="todas">Todos los estados</option>
-                <option value="excelente">⭐ Excelente</option>
+                <option value="sellado">🔒 Sellado</option>
+                <option value="semi nuevo">✨ Semi Nuevo</option>
+                <option value="reacondicionado">🔧 Reacondicionado</option>
                 <option value="bueno">👍 Bueno</option>
                 <option value="regular">⚠️ Regular</option>
                 <option value="malo">👎 Malo</option>
@@ -272,44 +260,22 @@ export const EquiposCanjeados = () => {
           const expandido = equiposExpandidos[equipo.idEquipo] || false;
 
           return (
-            <Card 
-              key={equipo.idEquipo}
-              className="shadow-sm border-0 mb-3"
-              style={{ borderRadius: '8px' }}
-            >
+            <Card key={equipo.idEquipo} className="shadow-sm border-0 mb-3" style={{ borderRadius: '8px' }}>
               <Card.Body className="p-0">
                 {/* Header del Equipo */}
-                <div 
-                  className="p-3"
-                  style={{ 
-                    cursor: 'pointer',
-                    backgroundColor: expandido ? '#f8f9fa' : '#fff',
-                    borderRadius: '8px',
-                    transition: 'background-color 0.2s ease'
-                  }}
-                  onClick={() => toggleEquipo(equipo.idEquipo)}
-                >
+                <div className="p-3"
+                  style={{ cursor: 'pointer', backgroundColor: expandido ? '#f8f9fa' : '#fff', borderRadius: '8px', transition: 'background-color 0.2s ease' }}
+                  onClick={() => toggleEquipo(equipo.idEquipo)}>
                   <Row className="align-items-center">
                     {/* Equipo */}
                     <Col lg={3} md={4}>
                       <div className="d-flex align-items-center">
-                        <div 
-                          className="d-flex align-items-center justify-content-center me-3"
-                          style={{
-                            width: '40px',
-                            height: '40px',
-                            borderRadius: '8px',
-                            backgroundColor: '#e8f0fe',
-                            color: '#3483FA',
-                            fontSize: '1.1rem'
-                          }}
-                        >
+                        <div className="d-flex align-items-center justify-content-center me-3"
+                          style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: '#e8f0fe', color: '#3483FA', fontSize: '1.1rem' }}>
                           <i className="bi bi-phone"></i>
                         </div>
                         <div>
-                          <div style={{ fontWeight: '600', color: '#333', fontSize: '0.95rem' }}>
-                            {equipo.nombre}
-                          </div>
+                          <div style={{ fontWeight: '600', color: '#333', fontSize: '0.95rem' }}>{equipo.nombre}</div>
                           <small style={{ color: '#999', fontSize: '0.8rem' }}>
                             {equipo.modelo} {equipo.imei ? `· IMEI: ${equipo.imei.slice(-4)}` : ''}
                           </small>
@@ -317,12 +283,13 @@ export const EquiposCanjeados = () => {
                       </div>
                     </Col>
 
-                    {/* Estado + Valor */}
+                    {/* Estado + Localidad */}
                     <Col lg={2} md={4}>
                       <div className="d-flex flex-column">
                         {badgeEstado(equipo.estado)}
                         <small style={{ color: '#999', fontSize: '0.75rem', marginTop: '4px' }}>
-                          Color: {equipo.color || '-'} · Bat: {equipo.bateria || '-'}
+                          <i className="bi bi-geo-alt me-1"></i>
+                          <span className="text-capitalize">{equipo.localidad || 'Sin localidad'}</span>
                         </small>
                       </div>
                     </Col>
@@ -334,7 +301,7 @@ export const EquiposCanjeados = () => {
                         {equipo.venta?.cliente?.apellido}, {equipo.venta?.cliente?.nombre}
                       </div>
                       <small style={{ color: '#999', fontSize: '0.8rem' }}>
-                        {equipo.venta?.localidad} · {equipo.venta?.vendedor ? `Vend: ${equipo.venta.vendedor}` : ''}
+                        <span className="text-capitalize">{equipo.venta?.localidad}</span> · {equipo.venta?.vendedor ? `Vend: ${equipo.venta.vendedor}` : ''}
                       </small>
                     </Col>
 
@@ -343,21 +310,22 @@ export const EquiposCanjeados = () => {
                       <div style={{ fontWeight: '600', color: '#333', fontSize: '0.95rem' }}>
                         {formatoMoneda(equipo.valorTasado)}
                       </div>
-                      <small style={{ color: '#999', fontSize: '0.75rem' }}>
-                        Valor tasado
-                      </small>
+                      <small style={{ color: '#999', fontSize: '0.75rem' }}>Valor tasado</small>
                     </Col>
 
-                    {/* Fecha + Expandir */}
-                    <Col lg={2} md={4} className="d-flex justify-content-between align-items-center">
+                    {/* Fecha + Acciones + Expandir */}
+                    <Col lg={2} md={4} className="d-flex align-items-center justify-content-end gap-2">
                       <small style={{ color: '#999', fontSize: '0.8rem' }}>
                         <i className="bi bi-calendar me-1"></i>
                         {formatoFecha(equipo.fechaRecepcion)}
                       </small>
-                      <i 
-                        className={`bi bi-chevron-${expandido ? 'up' : 'down'}`}
-                        style={{ color: '#666' }}
-                      ></i>
+                      <Button variant="outline-primary" size="sm" className="rounded-3"
+                        onClick={(e) => { e.stopPropagation(); handleEditar(equipo); }}
+                        title="Editar equipo">
+                        <i className="bi bi-pencil"></i>
+                      </Button>
+                      <i className={`bi bi-chevron-${expandido ? 'up' : 'down'}`} style={{ color: '#666', cursor: 'pointer' }}
+                        onClick={(e) => { e.stopPropagation(); toggleEquipo(equipo.idEquipo); }}></i>
                     </Col>
                   </Row>
                 </div>
@@ -375,30 +343,20 @@ export const EquiposCanjeados = () => {
                           </h6>
                           <div className="bg-light rounded-3 p-3">
                             <Row className="g-2">
+                              <Col xs={6}><small className="text-muted d-block">Nombre</small><span className="fw-semibold">{equipo.nombre}</span></Col>
+                              <Col xs={6}><small className="text-muted d-block">Modelo</small><span className="fw-semibold">{equipo.modelo || '-'}</span></Col>
+                              <Col xs={6}><small className="text-muted d-block">IMEI</small><span className="fw-semibold">{equipo.imei || '-'}</span></Col>
+                              <Col xs={6}><small className="text-muted d-block">Color</small><span className="fw-semibold">{equipo.color || '-'}</span></Col>
+                              <Col xs={6}><small className="text-muted d-block">Batería</small><span className="fw-semibold">{equipo.bateria || '-'}</span></Col>
+                              <Col xs={6}><small className="text-muted d-block">Estado</small><div>{badgeEstado(equipo.estado)}</div></Col>
+                              {/* 🆕 Localidad del equipo */}
                               <Col xs={6}>
-                                <small className="text-muted d-block">Nombre</small>
-                                <span className="fw-semibold">{equipo.nombre}</span>
+                                <small className="text-muted d-block">
+                                  <i className="bi bi-geo-alt me-1"></i>Localidad de destino
+                                </small>
+                                <span className="fw-semibold text-capitalize">{equipo.localidad || '-'}</span>
                               </Col>
-                              <Col xs={6}>
-                                <small className="text-muted d-block">Modelo</small>
-                                <span className="fw-semibold">{equipo.modelo || '-'}</span>
-                              </Col>
-                              <Col xs={6}>
-                                <small className="text-muted d-block">IMEI</small>
-                                <span className="fw-semibold">{equipo.imei || '-'}</span>
-                              </Col>
-                              <Col xs={6}>
-                                <small className="text-muted d-block">Color</small>
-                                <span className="fw-semibold">{equipo.color || '-'}</span>
-                              </Col>
-                              <Col xs={6}>
-                                <small className="text-muted d-block">Batería</small>
-                                <span className="fw-semibold">{equipo.bateria || '-'}</span>
-                              </Col>
-                              <Col xs={6}>
-                                <small className="text-muted d-block">Estado</small>
-                                <div>{badgeEstado(equipo.estado)}</div>
-                              </Col>
+                              <Col xs={6}><small className="text-muted d-block">Valor Tasado</small><span className="fw-semibold text-success">{formatoMoneda(equipo.valorTasado)}</span></Col>
                             </Row>
                           </div>
                         </Col>
@@ -411,34 +369,12 @@ export const EquiposCanjeados = () => {
                           </h6>
                           <div className="bg-light rounded-3 p-3">
                             <Row className="g-2">
-                              <Col xs={6}>
-                                <small className="text-muted d-block">Cliente</small>
-                                <span className="fw-semibold">
-                                  {equipo.venta?.cliente?.apellido}, {equipo.venta?.cliente?.nombre}
-                                </span>
-                              </Col>
-                              <Col xs={6}>
-                                <small className="text-muted d-block">DNI</small>
-                                <span className="fw-semibold">{equipo.venta?.cliente?.dni || '-'}</span>
-                              </Col>
-                              <Col xs={6}>
-                                <small className="text-muted d-block">Localidad</small>
-                                <span className="fw-semibold">{equipo.venta?.localidad || '-'}</span>
-                              </Col>
-                              <Col xs={6}>
-                                <small className="text-muted d-block">Vendedor</small>
-                                <span className="fw-semibold">{equipo.venta?.vendedor || '-'}</span>
-                              </Col>
-                              <Col xs={6}>
-                                <small className="text-muted d-block">Producto Entregado</small>
-                                <span className="fw-semibold">{equipo.venta?.productoEntregado?.nombre || '-'}</span>
-                              </Col>
-                              <Col xs={6}>
-                                <small className="text-muted d-block">Valor Producto</small>
-                                <span className="fw-semibold text-success">
-                                  {formatoMoneda(equipo.venta?.productoEntregado?.valor)}
-                                </span>
-                              </Col>
+                              <Col xs={6}><small className="text-muted d-block">Cliente</small><span className="fw-semibold">{equipo.venta?.cliente?.apellido}, {equipo.venta?.cliente?.nombre}</span></Col>
+                              <Col xs={6}><small className="text-muted d-block">DNI</small><span className="fw-semibold">{equipo.venta?.cliente?.dni || '-'}</span></Col>
+                              <Col xs={6}><small className="text-muted d-block">Localidad de venta</small><span className="fw-semibold text-capitalize">{equipo.venta?.localidad || '-'}</span></Col>
+                              <Col xs={6}><small className="text-muted d-block">Vendedor</small><span className="fw-semibold">{equipo.venta?.vendedor || '-'}</span></Col>
+                              <Col xs={6}><small className="text-muted d-block">Producto Entregado</small><span className="fw-semibold">{equipo.venta?.productoEntregado?.nombre || '-'}</span></Col>
+                              <Col xs={6}><small className="text-muted d-block">Valor Producto</small><span className="fw-semibold text-success">{formatoMoneda(equipo.venta?.productoEntregado?.valor)}</span></Col>
                             </Row>
                           </div>
                         </Col>
@@ -451,22 +387,13 @@ export const EquiposCanjeados = () => {
                               Notas
                             </h6>
                             {equipo.notas.map((nota, idx) => (
-                              <div 
-                                key={idx}
-                                className="d-flex align-items-start p-2 mb-2 bg-light rounded-3"
-                              >
+                              <div key={idx} className="d-flex align-items-start p-2 mb-2 bg-light rounded-3">
                                 <i className="bi bi-chat-left-text me-2 mt-1" style={{ color: '#3483FA' }}></i>
                                 <div className="flex-grow-1">
-                                  <small style={{ color: '#333', fontSize: '0.85rem' }}>
-                                    {nota.texto}
-                                  </small>
+                                  <small style={{ color: '#333', fontSize: '0.85rem' }}>{nota.texto}</small>
                                   <div className="d-flex justify-content-between mt-1">
-                                    <small style={{ color: '#999', fontSize: '0.7rem' }}>
-                                      {nota.usuario?.nombre || 'Sistema'}
-                                    </small>
-                                    <small style={{ color: '#999', fontSize: '0.7rem' }}>
-                                      {formatoFecha(nota.fecha)}
-                                    </small>
+                                    <small style={{ color: '#999', fontSize: '0.7rem' }}>{nota.usuario?.nombre || 'Sistema'}</small>
+                                    <small style={{ color: '#999', fontSize: '0.7rem' }}>{formatoFecha(nota.fecha)}</small>
                                   </div>
                                 </div>
                               </div>
@@ -482,6 +409,14 @@ export const EquiposCanjeados = () => {
           );
         })
       )}
+
+      {/* Modal Editar */}
+      <ModalEditarEquipoCanje
+        show={showEditar}
+        onHide={() => { setShowEditar(false); setEquipoSeleccionado(null); }}
+        equipo={equipoSeleccionado}
+        onSuccess={handleEditarExitoso}
+      />
     </Container>
   );
 };

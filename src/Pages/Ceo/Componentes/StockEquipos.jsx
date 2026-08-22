@@ -4,13 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Container, Row, Col, Card, Form, InputGroup, Badge, Button, Spinner, Alert, Modal } from 'react-bootstrap';
 import { listarStock, crearEquipo, editarEquipo, eliminarEquipo } from '../Helpers/stockApi';
 
-// Localidades disponibles (las mismas que usamos en ventas)
-const localidades = [
-  'Santiago Capital',
-  'La Banda',
-  'Añatuya',
-  'Monte Quemado'
-];
+const localidades = ['Santiago Capital', 'La Banda', 'Añatuya', 'Monte Quemado'];
 
 export const StockEquipos = () => {
   const [equipos, setEquipos] = useState([]);
@@ -22,20 +16,20 @@ export const StockEquipos = () => {
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('todas');
   const [filtroDisponible, setFiltroDisponible] = useState('todas');
+  const [filtroLocalidad, setFiltroLocalidad] = useState('todas'); // 🆕
 
   // Modal crear/editar
   const [showModal, setShowModal] = useState(false);
   const [equipoEditar, setEquipoEditar] = useState(null);
   const [formData, setFormData] = useState({
     nombre: '', modelo: '', imei: '', color: '', bateria: '',
-    localidad: '', // 🆕
+    localidad: '',
     estado: 'sellado', precioCompra: 0, precioVenta: 0,
     proveedor: { nombre: '', telefono: '' },
     disponible: true
   });
   const [saving, setSaving] = useState(false);
 
-  // Modal eliminar
   const [showDelete, setShowDelete] = useState(false);
   const [equipoEliminar, setEquipoEliminar] = useState(null);
 
@@ -61,25 +55,28 @@ export const StockEquipos = () => {
 
   const equiposFiltrados = useMemo(() => {
     let resultado = Array.isArray(equipos) ? equipos : [];
+
     if (busqueda.trim()) {
       const t = busqueda.toLowerCase().trim();
       resultado = resultado.filter(e =>
         e.nombre?.toLowerCase().includes(t) || e.modelo?.toLowerCase().includes(t) ||
         e.imei?.includes(t) || e.color?.toLowerCase().includes(t) ||
-        e.localidad?.toLowerCase().includes(t) // 🆕
+        e.localidad?.toLowerCase().includes(t)
       );
     }
     if (filtroEstado !== 'todas') resultado = resultado.filter(e => e.estado === filtroEstado);
     if (filtroDisponible === 'true') resultado = resultado.filter(e => e.disponible);
     if (filtroDisponible === 'false') resultado = resultado.filter(e => !e.disponible);
+    if (filtroLocalidad !== 'todas') resultado = resultado.filter(e => e.localidad === filtroLocalidad); // 🆕
+
     return resultado;
-  }, [equipos, busqueda, filtroEstado, filtroDisponible]);
+  }, [equipos, busqueda, filtroEstado, filtroDisponible, filtroLocalidad]);
 
   const handleCrear = () => {
     setEquipoEditar(null);
     setFormData({
       nombre: '', modelo: '', imei: '', color: '', bateria: '',
-      localidad: '', // 🆕
+      localidad: '',
       estado: 'sellado', precioCompra: 0, precioVenta: 0,
       proveedor: { nombre: '', telefono: '' },
       disponible: true
@@ -92,7 +89,7 @@ export const StockEquipos = () => {
     setFormData({
       nombre: equipo.nombre || '', modelo: equipo.modelo || '', imei: equipo.imei || '',
       color: equipo.color || '', bateria: equipo.bateria || '',
-      localidad: equipo.localidad || '', // 🆕
+      localidad: equipo.localidad || '',
       estado: equipo.estado || 'sellado',
       precioCompra: equipo.precioCompra || 0, precioVenta: equipo.precioVenta || 0,
       proveedor: {
@@ -129,7 +126,7 @@ export const StockEquipos = () => {
         imei: formData.imei.trim(),
         color: formData.color.trim(),
         bateria: formData.bateria.trim(),
-        localidad: formData.localidad, // 🆕
+        localidad: formData.localidad,
         estado: formData.estado,
         precioCompra: parseFloat(formData.precioCompra) || 0,
         precioVenta: parseFloat(formData.precioVenta),
@@ -185,7 +182,16 @@ export const StockEquipos = () => {
     return <Badge bg={config[estado] || 'secondary'} className="text-capitalize">{estado}</Badge>;
   };
 
-  const estadosEquipo = ['nuevo', 'sellado', 'semi nuevo', 'reacondicionado', 'exhibicion'];
+  
+  const estadosEquipo = [
+    'sellado', 
+    'semi nuevo', 
+    'reacondicionado', 
+    'exhibicion', 
+    'bueno', 
+    'regular', 
+    'malo'
+];
 
   if (isLoading) return <div className="text-center py-5"><Spinner animation="border" style={{ color: '#3483FA' }} /><p className="text-muted mt-3">Cargando stock...</p></div>;
   if (error) return <Alert variant="danger" className="shadow-sm border-0" style={{ borderRadius: '8px' }}><i className="bi bi-exclamation-triangle me-2"></i>{error}<button onClick={cargarDatos} className="btn btn-link btn-sm ms-3" style={{ color: '#dc3545', textDecoration: 'underline' }}>Reintentar</button></Alert>;
@@ -207,21 +213,28 @@ export const StockEquipos = () => {
       <Card className="shadow-sm border-0 mb-4" style={{ borderRadius: '8px' }}>
         <Card.Body className="p-3">
           <Row className="g-3 align-items-end">
-            <Col md={4}>
+            <Col lg={3} md={6}>
               <InputGroup>
                 <InputGroup.Text style={{ backgroundColor: '#f8f9fa', border: '1px solid #e5e5e5' }}><i className="bi bi-search" style={{ color: '#999' }}></i></InputGroup.Text>
-                <Form.Control placeholder="Buscar por nombre, modelo, IMEI, localidad..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
+                <Form.Control placeholder="Buscar por nombre, modelo, IMEI..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
                   style={{ border: '1px solid #e5e5e5', fontSize: '0.9rem', padding: '10px 12px' }} />
               </InputGroup>
             </Col>
-            <Col md={2}>
+            <Col lg={2} md={6}>
+              <Form.Select value={filtroLocalidad} onChange={(e) => setFiltroLocalidad(e.target.value)}
+                style={{ border: '1px solid #e5e5e5', borderRadius: '6px', fontSize: '0.9rem', padding: '10px 12px' }}>
+                <option value="todas">Todas las localidades</option>
+                {localidades.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+              </Form.Select>
+            </Col>
+            <Col lg={2} md={6}>
               <Form.Select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}
                 style={{ border: '1px solid #e5e5e5', borderRadius: '6px', fontSize: '0.9rem', padding: '10px 12px' }}>
                 <option value="todas">Todos los estados</option>
                 {estadosEquipo.map(e => <option key={e} value={e}>{e.charAt(0).toUpperCase() + e.slice(1)}</option>)}
               </Form.Select>
             </Col>
-            <Col md={2}>
+            <Col lg={2} md={6}>
               <Form.Select value={filtroDisponible} onChange={(e) => setFiltroDisponible(e.target.value)}
                 style={{ border: '1px solid #e5e5e5', borderRadius: '6px', fontSize: '0.9rem', padding: '10px 12px' }}>
                 <option value="todas">Todos</option>
@@ -229,10 +242,8 @@ export const StockEquipos = () => {
                 <option value="false">Vendidos</option>
               </Form.Select>
             </Col>
-            <Col md={2} className="d-flex align-items-end">
+            <Col lg={3} md={6} className="d-flex justify-content-end align-items-center gap-2">
               <small style={{ color: '#999' }}>{equiposFiltrados.length} equipos</small>
-            </Col>
-            <Col md={2} className="d-flex justify-content-end">
               <Button onClick={handleCrear} className="rounded-3" style={{ backgroundColor: '#3483FA', borderColor: '#3483FA', fontWeight: '500' }}>
                 <i className="bi bi-plus-circle me-2"></i>Nuevo Equipo
               </Button>
@@ -243,7 +254,7 @@ export const StockEquipos = () => {
 
       {/* Tabla */}
       {equiposFiltrados.length === 0 ? (
-        <div className="text-center py-5"><i className="bi bi-inbox" style={{ fontSize: '3rem', color: '#ccc' }}></i><p className="text-muted mt-3">No hay equipos en stock</p></div>
+        <div className="text-center py-5"><i className="bi bi-inbox" style={{ fontSize: '3rem', color: '#ccc' }}></i><p className="text-muted mt-3">No hay equipos en stock con los filtros aplicados</p></div>
       ) : (
         <Card className="shadow-sm border-0" style={{ borderRadius: '8px' }}>
           <Card.Body className="p-0">
@@ -270,7 +281,9 @@ export const StockEquipos = () => {
                         <small style={{ color: '#999' }}>{eq.modelo || '-'} · {eq.color || '-'}</small>
                       </td>
                       <td style={{ color: '#666', fontSize: '0.85rem' }}>{eq.imei || '-'}</td>
-                      <td style={{ color: '#666', fontSize: '0.85rem' }}>{eq.localidad || '-'}</td>
+                      <td style={{ color: '#666', fontSize: '0.85rem' }}>
+                        <Badge bg="light" text="dark" className="border">{eq.localidad || 'Sin localidad'}</Badge>
+                      </td>
                       <td>{badgeEstado(eq.estado)}</td>
                       <td style={{ color: '#666' }}>{formatoMoneda(eq.precioCompra)}</td>
                       <td style={{ fontWeight: '500', color: '#198754' }}>{formatoMoneda(eq.precioVenta)}</td>
@@ -309,7 +322,6 @@ export const StockEquipos = () => {
         </Modal.Header>
         <Form onSubmit={handleGuardar}>
           <Modal.Body className="pt-3">
-            {/* Datos del Equipo */}
             <div className="border rounded-3 p-3 mb-4" style={{ backgroundColor: '#f8f9fa' }}>
               <h6 className="fw-bold text-secondary mb-3" style={{ fontSize: '0.85rem' }}>
                 <i className="bi bi-phone me-2"></i>Datos del Equipo
@@ -317,7 +329,7 @@ export const StockEquipos = () => {
               <Row className="g-3">
                 <Col md={6}>
                   <Form.Label className="small fw-semibold text-secondary">Nombre <span className="text-danger">*</span></Form.Label>
-                  <Form.Control name="nombre" value={formData.nombre} onChange={handleChange} className="rounded-3" placeholder="Ej: Iphone" disabled={saving} />
+                  <Form.Control name="nombre" value={formData.nombre} onChange={handleChange} className="rounded-3" placeholder="Ej: iPhone 13" disabled={saving} />
                 </Col>
                 <Col md={6}>
                   <Form.Label className="small fw-semibold text-secondary">Modelo</Form.Label>
@@ -335,7 +347,6 @@ export const StockEquipos = () => {
                   <Form.Label className="small fw-semibold text-secondary">Batería</Form.Label>
                   <Form.Control name="bateria" value={formData.bateria} onChange={handleChange} className="rounded-3" placeholder="Ej: 85%" disabled={saving} />
                 </Col>
-                {/* 🆕 Localidad */}
                 <Col md={6}>
                   <Form.Label className="small fw-semibold text-secondary">
                     <i className="bi bi-geo-alt me-1"></i>Localidad de destino
@@ -348,7 +359,6 @@ export const StockEquipos = () => {
               </Row>
             </div>
 
-            {/* Estado y Precios */}
             <div className="border rounded-3 p-3 mb-4" style={{ backgroundColor: '#f8f9fa' }}>
               <h6 className="fw-bold text-secondary mb-3" style={{ fontSize: '0.85rem' }}>
                 <i className="bi bi-tag me-2"></i>Estado y Precios
@@ -386,7 +396,6 @@ export const StockEquipos = () => {
               </Row>
             </div>
 
-            {/* Proveedor */}
             <div className="border rounded-3 p-3 mb-3" style={{ backgroundColor: '#f8f9fa' }}>
               <h6 className="fw-bold text-secondary mb-3" style={{ fontSize: '0.85rem' }}>
                 <i className="bi bi-truck me-2"></i>Proveedor <Badge bg="secondary" className="ms-1" style={{ fontSize: '0.65rem' }}>Opcional</Badge>

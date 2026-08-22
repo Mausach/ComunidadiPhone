@@ -52,3 +52,30 @@ export const obtenerEquiposCanjeados = async () => {
     );
   }
 };
+
+/**
+ * 🆕 Listar equipos disponibles (stock + canje)
+ * @param {Object} filtros - { localidad, nombre, modelo, imei, estado, origen, pagina, limite }
+ */
+export const listarEquiposDisponibles = async (filtros = {}) => {
+  try {
+    const params = new URLSearchParams();
+    if (filtros.localidad) params.append('localidad', filtros.localidad);
+    if (filtros.nombre) params.append('nombre', filtros.nombre);
+    if (filtros.modelo) params.append('modelo', filtros.modelo);
+    if (filtros.imei) params.append('imei', filtros.imei);
+    if (filtros.estado && filtros.estado !== 'todas') params.append('estado', filtros.estado);
+    if (filtros.origen && filtros.origen !== 'todas') params.append('origen', filtros.origen);
+    if (filtros.pagina) params.append('pagina', filtros.pagina);
+    if (filtros.limite) params.append('limite', filtros.limite);
+
+    const url = `/rep_ceo/equipos-disp${params.toString() ? '?' + params.toString() : ''}`;
+    const resp = await authApi.get(url);
+    return resp.data;
+  } catch (error) {
+    console.error('Error al listar equipos disponibles:', error);
+    throw new Error(
+      error.response?.data?.message || error.response?.data?.msg || 'Error al cargar los equipos disponibles'
+    );
+  }
+  };

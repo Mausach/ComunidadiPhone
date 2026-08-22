@@ -2,7 +2,7 @@ import authApi from "../../../Api/authApi";
 
 
 /**
- * Obtiene las cobranzas del día
+ * Obtiene las cobranzas del día NO SE USA
  */
 export const obtenerCobranzasDelDia = async () => {
   try {

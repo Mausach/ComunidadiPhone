@@ -1,16 +1,17 @@
-// Ventas/Componentes/FormularioVenta.jsx
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     Form, Row, Col, Button, Card, InputGroup, Badge,
-    Alert, Spinner
+    Alert, Spinner, ListGroup
 } from 'react-bootstrap';
+import { listarEquiposDisponibles } from '../../Ceo/Helpers/ReportesMensuales';
 
 
 export const FormularioVenta = ({
     clienteData,
     onSubmit,
     isLoading,
-    vendedor
+    vendedor,
+    onVolver
 }) => {
     const [formData, setFormData] = useState({
         tipoVenta: 'contado',
@@ -35,7 +36,7 @@ export const FormularioVenta = ({
             dni: '',
             cuil: '',
             telefono: '',
-            telefono2: '', // 🆕
+            telefono2: '',
             email: '',
             direccion: ''
         },
@@ -56,10 +57,17 @@ export const FormularioVenta = ({
         vendedor: vendedor || ''
     });
 
+    // Equipos disponibles
+    const [equiposDisponibles, setEquiposDisponibles] = useState([]);
+    const [equipoSeleccionado, setEquipoSeleccionado] = useState(null);
+    const [cargandoEquipos, setCargandoEquipos] = useState(false);
+    const [mostrarEquipos, setMostrarEquipos] = useState(false);
+
     const [alert, setAlert] = useState({ show: false, message: '', variant: 'danger' });
     const [nuevaNota, setNuevaNota] = useState('');
     const alertRef = useRef(null);
 
+    // Tipos de venta (con sistema2)
     const tiposVenta = [
         { value: 'contado', label: 'Contado' },
         { value: 'sistema1', label: 'Sistema 1 (Cuotas con entrega)' },
@@ -81,7 +89,7 @@ export const FormularioVenta = ({
         { value: 'tarjeta_credito', label: 'Tarjeta de Crédito' }
     ];
 
-    const localidades = ['Santiago Capital', 'La Banda', 'Añatuya', 'Monte Quemado'];
+    const localidades = ['santiago capital', 'la banda', 'añatuya', 'monte quemado'];
 
     const frecuencias = [
         { value: 'mensual', label: 'Mensual', descripcion: '1 cuota por mes, día 10' },
@@ -89,6 +97,64 @@ export const FormularioVenta = ({
         { value: 'semanal', label: 'Semanal', descripcion: '1 cuota por semana' },
         { value: 'diario', label: 'Diario', descripcion: '1 cuota por día' }
     ];
+
+    // 🆕 Efecto: forzar garante obligatorio en sistema1
+    useEffect(() => {
+        if (formData.tipoVenta === 'sistema1') {
+            setFormData(prev => ({
+                ...prev,
+                requiereGarante: true
+            }));
+        }
+    }, [formData.tipoVenta]);
+
+    // Cargar equipos disponibles (excepto en sistema2)
+    useEffect(() => {
+        if (formData.localidad && formData.tipoVenta !== 'sistema2') {
+            cargarEquiposDisponibles();
+        } else {
+            setEquiposDisponibles([]);
+            setEquipoSeleccionado(null);
+            setMostrarEquipos(false);
+        }
+    }, [formData.localidad, formData.tipoVenta]);
+
+    const cargarEquiposDisponibles = async () => {
+        setCargandoEquipos(true);
+        try {
+            const data = await listarEquiposDisponibles({
+                localidad: formData.localidad,
+                limite: 50
+            });
+            const equipos = data?.data?.equipos || [];
+            setEquiposDisponibles(Array.isArray(equipos) ? equipos : []);
+        } catch (error) {
+            console.error('Error al cargar equipos:', error);
+            setEquiposDisponibles([]);
+        } finally {
+            setCargandoEquipos(false);
+        }
+    };
+
+    const handleSeleccionarEquipo = (equipo) => {
+        setEquipoSeleccionado(equipo);
+        setMostrarEquipos(false);
+
+        setFormData(prev => ({
+            ...prev,
+            producto: {
+                nombre: equipo.nombre || '',
+                modelo: equipo.modelo || '',
+                bateria: equipo.bateria || '',
+                color: equipo.color || '',
+                imei: equipo.imei || '',
+                estado: equipo.estado || 'sellado',
+                valor: equipo.origen === 'stock' ? (equipo.precioVenta || 0) : (equipo.valorTasado || 0)
+            }
+        }));
+
+        showAlert(`Equipo seleccionado: ${equipo.nombre} (${equipo.origen === 'stock' ? 'Stock' : 'Canje'})`, 'success');
+    };
 
     const showAlert = (message, variant = 'danger') => {
         if (!message) { setAlert({ show: false, message: '', variant: 'danger' }); return; }
@@ -113,6 +179,7 @@ export const FormularioVenta = ({
     const handleProductoChange = (e) => {
         const { name, value } = e.target;
         setFormData({ ...formData, producto: { ...formData.producto, [name]: value } });
+        if (equipoSeleccionado) setEquipoSeleccionado(null);
     };
 
     const handlePagoChange = (index, field, value) => {
@@ -164,7 +231,9 @@ export const FormularioVenta = ({
 
     const calcularMontoTotal = () => {
         const valorProducto = parseFloat(formData.producto.valor) || 0;
-        if (formData.tipoVenta === 'sistema2') return (parseFloat(formData.montoCuota) || 0) * (parseInt(formData.cantidadCuotas) || 0);
+        if (formData.tipoVenta === 'sistema2') {
+            return (parseFloat(formData.montoCuota) || 0) * (parseInt(formData.cantidadCuotas) || 0);
+        }
         if (formData.tipoVenta === 'plan_canje') {
             const valorCanje = parseFloat(formData.equipoCanje.valorTasado) || 0;
             const montoCuota = parseFloat(formData.montoCuota) || 0;
@@ -183,7 +252,7 @@ export const FormularioVenta = ({
 
         if (!formData.localidad) { showAlert('Seleccioná una localidad', 'warning'); return; }
         if (!formData.fechaRealizada) { showAlert('La fecha de la venta es obligatoria', 'warning'); return; }
-        if (!formData.producto.nombre.trim()) { showAlert('El nombre del producto es obligatorio', 'warning'); return; }
+        if (!formData.producto.nombre.trim()) { showAlert('Seleccioná un equipo o ingresá el nombre del producto', 'warning'); return; }
         if (!formData.producto.valor || parseFloat(formData.producto.valor) <= 0) { showAlert('El valor del producto debe ser mayor a 0', 'warning'); return; }
         if (!clienteData || !clienteData.dni) { showAlert('Datos del cliente incompletos. Por favor, verificá.', 'danger'); return; }
 
@@ -202,7 +271,17 @@ export const FormularioVenta = ({
             if (!formData.equipoCanje.valorTasado || parseFloat(formData.equipoCanje.valorTasado) <= 0) { showAlert('El valor tasado del equipo debe ser mayor a 0', 'warning'); return; }
         }
 
-        if (formData.requiereGarante) {
+        // 🆕 Validar garante OBLIGATORIO en sistema1
+        if (formData.tipoVenta === 'sistema1') {
+            const { nombre, apellido, dni, telefono, direccion } = formData.garante;
+            if (!nombre.trim() || !apellido.trim() || !dni.trim() || !telefono.trim() || !direccion.trim()) {
+                showAlert('El garante es obligatorio para Sistema 1. Completá todos sus datos.', 'warning');
+                return;
+            }
+        }
+
+        // Validar garante si está activo (para otros tipos)
+        if (formData.requiereGarante && formData.tipoVenta !== 'sistema1') {
             const { nombre, apellido, dni, telefono, direccion } = formData.garante;
             if (!nombre.trim() || !apellido.trim() || !dni.trim() || !telefono.trim() || !direccion.trim()) { showAlert('Todos los campos del garante son obligatorios', 'warning'); return; }
         }
@@ -212,12 +291,16 @@ export const FormularioVenta = ({
             localidad: formData.localidad,
             fechaRealizada: formData.fechaRealizada || new Date().toISOString().split('T')[0],
             vendedor: vendedor || '',
+            equipoSeleccionado: (equipoSeleccionado && formData.tipoVenta !== 'sistema2') ? {
+                _id: equipoSeleccionado._id,
+                origen: equipoSeleccionado.origen
+            } : null,
             cliente: {
                 nombre: clienteData.nombre,
                 apellido: clienteData.apellido,
                 dni: clienteData.dni,
                 telefono: clienteData.telefono || '',
-                telefono2: clienteData.telefono2 || '', // 🆕
+                telefono2: clienteData.telefono2 || '',
                 email: clienteData.email || '',
                 direccion: clienteData.direccion || ''
             },
@@ -233,14 +316,14 @@ export const FormularioVenta = ({
             pagos: formData.pagos
                 .filter(pago => pago.monto > 0 && pago.metodo)
                 .map(pago => ({ monto: parseFloat(pago.monto), metodo: pago.metodo, notas: [] })),
-            requiereGarante: formData.requiereGarante,
-            garante: formData.requiereGarante ? {
+            requiereGarante: formData.tipoVenta === 'sistema1' ? true : formData.requiereGarante, // 🆕
+            garante: (formData.tipoVenta === 'sistema1' || formData.requiereGarante) ? {
                 nombre: formData.garante.nombre.trim(),
                 apellido: formData.garante.apellido.trim(),
                 dni: formData.garante.dni.trim(),
                 cuil: formData.garante.cuil.trim() || '',
                 telefono: formData.garante.telefono.trim(),
-                telefono2: formData.garante.telefono2.trim(), // 🆕
+                telefono2: formData.garante.telefono2.trim(),
                 email: formData.garante.email.trim() || '',
                 direccion: formData.garante.direccion.trim()
             } : {},
@@ -270,6 +353,8 @@ export const FormularioVenta = ({
     const mostrarEquipoCanje = formData.tipoVenta === 'plan_canje';
     const mostrarPagos = ['contado', 'sistema1'].includes(formData.tipoVenta);
     const frecuenciaSeleccionada = frecuencias.find(f => f.value === formData.frecuencia);
+    const mostrarSeccionEquipos = formData.localidad && formData.tipoVenta !== 'sistema2';
+    const garanteObligatorio = formData.tipoVenta === 'sistema1'; // 🆕
 
     return (
         <Card className="border-0 shadow-sm" style={{ borderRadius: '16px' }}>
@@ -296,7 +381,7 @@ export const FormularioVenta = ({
                 )}
 
                 <Form onSubmit={handleSubmit}>
-                    {/* SECCIÓN 1 */}
+                    {/* SECCIÓN 1: DATOS GENERALES */}
                     <div className="border rounded-3 p-3 mb-4" style={{ backgroundColor: '#f8f9fa' }}>
                         <h6 className="fw-bold text-primary mb-3" style={{ fontSize: '0.85rem' }}><i className="bi bi-info-circle me-2"></i>Datos Generales</h6>
                         <Row className="g-3">
@@ -313,7 +398,7 @@ export const FormularioVenta = ({
                                     <Form.Label className="small fw-semibold text-secondary">Localidad <span className="text-danger">*</span></Form.Label>
                                     <Form.Select name="localidad" value={formData.localidad} onChange={handleChange} className="rounded-3" disabled={isLoading}>
                                         <option value="">Seleccioná una localidad</option>
-                                        {localidades.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+                                        {localidades.map(loc => <option key={loc} value={loc}>{loc.charAt(0).toUpperCase() + loc.slice(1)}</option>)}
                                     </Form.Select>
                                 </Form.Group>
                             </Col>
@@ -322,11 +407,76 @@ export const FormularioVenta = ({
                                     <Form.Label className="small fw-semibold text-secondary"><i className="bi bi-calendar me-1"></i>Fecha de la Venta</Form.Label>
                                     <Form.Control type="date" name="fechaRealizada" value={formData.fechaRealizada} onChange={handleChange}
                                         className="rounded-3" disabled={isLoading} max={new Date().toISOString().split('T')[0]} />
-                                    <Form.Text className="text-muted small"><i className="bi bi-info-circle me-1"></i>Por defecto es la fecha actual.</Form.Text>
                                 </Form.Group>
                             </Col>
                         </Row>
                     </div>
+
+                    {/* SECCIÓN: EQUIPOS DISPONIBLES (excepto sistema2) */}
+                    {mostrarSeccionEquipos && (
+                        <div className="border rounded-3 p-3 mb-4" style={{ backgroundColor: '#e8f0fe' }}>
+                            <h6 className="fw-bold text-primary mb-3" style={{ fontSize: '0.85rem' }}>
+                                <i className="bi bi-box-seam me-2"></i>Equipos Disponibles en {formData.localidad.charAt(0).toUpperCase() + formData.localidad.slice(1)}
+                            </h6>
+
+                            {cargandoEquipos ? (
+                                <div className="text-center py-3"><Spinner size="sm" /> <span className="ms-2 text-muted small">Cargando equipos...</span></div>
+                            ) : equipoSeleccionado ? (
+                                <div className="bg-white rounded-3 p-3 border border-success">
+                                    <Row className="align-items-center">
+                                        <Col md={8}>
+                                            <div className="fw-semibold">{equipoSeleccionado.nombre} {equipoSeleccionado.modelo}</div>
+                                            <small className="text-muted">
+                                                IMEI: {equipoSeleccionado.imei || '-'} · {equipoSeleccionado.color || '-'} · {equipoSeleccionado.bateria || '-'}
+                                            </small>
+                                            <Badge bg={equipoSeleccionado.origen === 'stock' ? 'primary' : 'info'} className="ms-2">
+                                                {equipoSeleccionado.origen === 'stock' ? 'Stock' : 'Canje'}
+                                            </Badge>
+                                        </Col>
+                                        <Col md={4} className="text-end">
+                                            <Button variant="outline-secondary" size="sm" onClick={() => {
+                                                setEquipoSeleccionado(null);
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    producto: { nombre: '', modelo: '', bateria: '', color: '', imei: '', estado: 'sellado', valor: 0 }
+                                                }));
+                                            }}>
+                                                <i className="bi bi-x-lg"></i> Quitar
+                                            </Button>
+                                        </Col>
+                                    </Row>
+                                </div>
+                            ) : (
+                                <>
+                                    <Button variant="outline-primary" size="sm" className="mb-2" onClick={() => setMostrarEquipos(!mostrarEquipos)}>
+                                        <i className={`bi bi-${mostrarEquipos ? 'eye-slash' : 'eye'} me-1`}></i>
+                                        {mostrarEquipos ? 'Ocultar equipos' : `Ver equipos disponibles (${equiposDisponibles.length})`}
+                                    </Button>
+
+                                    {mostrarEquipos && (
+                                        equiposDisponibles.length === 0 ? (
+                                            <div className="text-center py-3 text-muted small">No hay equipos disponibles en esta localidad</div>
+                                        ) : (
+                                            <ListGroup style={{ maxHeight: '250px', overflowY: 'auto' }}>
+                                                {equiposDisponibles.map(eq => (
+                                                    <ListGroup.Item key={eq._id} action onClick={() => handleSeleccionarEquipo(eq)}
+                                                        className="d-flex justify-content-between align-items-center">
+                                                        <div>
+                                                            <span className="fw-semibold">{eq.nombre} {eq.modelo}</span>
+                                                            <small className="text-muted ms-2">{eq.imei || 'Sin IMEI'}</small>
+                                                        </div>
+                                                        <Badge bg={eq.origen === 'stock' ? 'primary' : 'info'}>
+                                                            {eq.origen === 'stock' ? `$${eq.precioVenta?.toLocaleString()}` : `$${eq.valorTasado?.toLocaleString()}`}
+                                                        </Badge>
+                                                    </ListGroup.Item>
+                                                ))}
+                                            </ListGroup>
+                                        )
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    )}
 
                     {/* SECCIÓN 2: PRODUCTO */}
                     <div className="border rounded-3 p-3 mb-4" style={{ backgroundColor: '#f8f9fa' }}>
@@ -336,34 +486,34 @@ export const FormularioVenta = ({
                                 <Form.Group>
                                     <Form.Label className="small fw-semibold text-secondary">Nombre del Producto <span className="text-danger">*</span></Form.Label>
                                     <Form.Control type="text" name="nombre" value={formData.producto.nombre} onChange={handleProductoChange}
-                                        placeholder="Ej: iPhone" className="rounded-3" disabled={isLoading} />
+                                        placeholder="Ej: iPhone" className="rounded-3" disabled={isLoading || !!equipoSeleccionado} />
                                 </Form.Group>
                             </Col>
                             <Col md={6}>
                                 <Form.Group>
                                     <Form.Label className="small fw-semibold text-secondary">Modelo</Form.Label>
                                     <Form.Control type="text" name="modelo" value={formData.producto.modelo} onChange={handleProductoChange}
-                                        placeholder="Ej: 13 pro max" className="rounded-3" disabled={isLoading} />
+                                        placeholder="Ej: 13 pro max" className="rounded-3" disabled={isLoading || !!equipoSeleccionado} />
                                 </Form.Group>
                             </Col>
                             <Col md={4}>
                                 <Form.Group>
                                     <Form.Label className="small fw-semibold text-secondary">Color</Form.Label>
                                     <Form.Control type="text" name="color" value={formData.producto.color} onChange={handleProductoChange}
-                                        placeholder="Ej: Negro" className="rounded-3" disabled={isLoading} />
+                                        placeholder="Ej: Negro" className="rounded-3" disabled={isLoading || !!equipoSeleccionado} />
                                 </Form.Group>
                             </Col>
                             <Col md={4}>
                                 <Form.Group>
                                     <Form.Label className="small fw-semibold text-secondary">Batería</Form.Label>
                                     <Form.Control type="text" name="bateria" value={formData.producto.bateria} onChange={handleProductoChange}
-                                        placeholder="Ej: 80%" className="rounded-3" disabled={isLoading} />
+                                        placeholder="Ej: 80%" className="rounded-3" disabled={isLoading || !!equipoSeleccionado} />
                                 </Form.Group>
                             </Col>
                             <Col md={4}>
                                 <Form.Group>
                                     <Form.Label className="small fw-semibold text-secondary">Estado</Form.Label>
-                                    <Form.Select name="estado" value={formData.producto.estado} onChange={handleProductoChange} className="rounded-3" disabled={isLoading}>
+                                    <Form.Select name="estado" value={formData.producto.estado} onChange={handleProductoChange} className="rounded-3" disabled={isLoading || !!equipoSeleccionado}>
                                         {estadosProducto.map(estado => <option key={estado.value} value={estado.value}>{estado.label}</option>)}
                                     </Form.Select>
                                 </Form.Group>
@@ -372,8 +522,7 @@ export const FormularioVenta = ({
                                 <Form.Group>
                                     <Form.Label className="small fw-semibold text-secondary">IMEI</Form.Label>
                                     <Form.Control type="text" name="imei" value={formData.producto.imei} onChange={handleProductoChange}
-                                        placeholder="15 dígitos (opcional)" className="rounded-3" disabled={isLoading} maxLength={15} />
-                                    <Form.Text className="text-muted small"><i className="bi bi-info-circle me-1"></i>Opcional - Se validará que no esté duplicado</Form.Text>
+                                        placeholder="15 dígitos (opcional)" className="rounded-3" disabled={isLoading || !!equipoSeleccionado} maxLength={15} />
                                 </Form.Group>
                             </Col>
                             <Col md={6}>
@@ -417,26 +566,16 @@ export const FormularioVenta = ({
                                         <Form.Select name="frecuencia" value={formData.frecuencia} onChange={handleChange} className="rounded-3" disabled={isLoading}>
                                             {frecuencias.map(frec => <option key={frec.value} value={frec.value}>{frec.label}</option>)}
                                         </Form.Select>
-                                        <Form.Text className="text-muted small"><i className="bi bi-info-circle me-1"></i>{frecuenciaSeleccionada?.descripcion}</Form.Text>
                                     </Form.Group>
                                 </Col>
                             </Row>
-                            {formData.montoCuota > 0 && formData.cantidadCuotas > 0 && (
-                                <div className="mt-3 p-3 bg-white rounded-3 border">
-                                    <Row className="text-center">
-                                        <Col xs={6} md={4}><small className="text-muted d-block">Total a Financiar</small><strong className="text-primary">${(formData.montoCuota * formData.cantidadCuotas).toLocaleString()}</strong></Col>
-                                        <Col xs={6} md={4}><small className="text-muted d-block">Cantidad de Cuotas</small><strong>{formData.cantidadCuotas}</strong></Col>
-                                        <Col xs={12} md={4} className="mt-2 mt-md-0"><small className="text-muted d-block">Frecuencia</small><Badge bg="dark"><i className="bi bi-arrow-repeat me-1"></i>{frecuenciaSeleccionada?.label}</Badge></Col>
-                                    </Row>
-                                </div>
-                            )}
                         </div>
                     )}
 
                     {/* SECCIÓN 4: EQUIPO CANJE */}
                     {mostrarEquipoCanje && (
                         <div className="border rounded-3 p-3 mb-4" style={{ backgroundColor: '#f8f9fa' }}>
-                            <h6 className="fw-bold text-info mb-3" style={{ fontSize: '0.85rem' }}><i className="bi bi-arrow-left-right me-2"></i>Equipo a Canjear</h6>
+                            <h6 className="fw-bold text-info mb-3" style={{ fontSize: '0.85rem' }}><i className="bi bi-arrow-left-right me-2"></i>Equipo a Canjear (Recibido del Cliente)</h6>
                             <Row className="g-3">
                                 <Col md={6}>
                                     <Form.Group>
@@ -477,10 +616,12 @@ export const FormularioVenta = ({
                                     <Form.Group>
                                         <Form.Label className="small fw-semibold text-secondary">Estado del Equipo <span className="text-danger">*</span></Form.Label>
                                         <Form.Select name="estado" value={formData.equipoCanje.estado} onChange={handleEquipoCanjeChange} className="rounded-3" disabled={isLoading}>
-                                            <option value="excelente">Excelente</option>
-                                            <option value="bueno">Bueno</option>
-                                            <option value="regular">Regular</option>
-                                            <option value="malo">Malo</option>
+                                            <option value="sellado">🔒 Sellado</option>
+                                            <option value="semi nuevo">✨ Semi Nuevo</option>
+                                            <option value="reacondicionado">🔧 Reacondicionado</option>
+                                            <option value="bueno">👍 Bueno</option>
+                                            <option value="regular">⚠️ Regular</option>
+                                            <option value="malo">👎 Malo</option>
                                         </Form.Select>
                                     </Form.Group>
                                 </Col>
@@ -501,7 +642,7 @@ export const FormularioVenta = ({
                     {/* SECCIÓN 5: PAGOS */}
                     {mostrarPagos && (
                         <div className="border rounded-3 p-3 mb-4" style={{ backgroundColor: '#f8f9fa' }}>
-                            <h6 className="fw-bold text-success mb-3" style={{ fontSize: '0.85rem' }}><i className="bi bi-wallet2 me-2"></i>Pagos</h6>
+                            <h6 className="fw-bold text-success mb-3" style={{ fontSize: '0.85rem' }}><i className="bi bi-wallet2 me-2"></i>Entrega</h6>
                             {formData.pagos.map((pago, index) => (
                                 <Row key={index} className="g-2 mb-2 align-items-end">
                                     <Col md={4}>
@@ -546,11 +687,20 @@ export const FormularioVenta = ({
                     {mostrarGarante && (
                         <div className="border rounded-3 p-3 mb-4" style={{ backgroundColor: '#f8f9fa' }}>
                             <div className="d-flex justify-content-between align-items-center mb-3">
-                                <h6 className="fw-bold text-primary mb-0" style={{ fontSize: '0.85rem' }}><i className="bi bi-person-check me-2"></i>Garante</h6>
-                                <Form.Check type="switch" id="requiereGarante" label="Requiere garante" name="requiereGarante"
-                                    checked={formData.requiereGarante} onChange={handleChange} disabled={isLoading} />
+                                <h6 className="fw-bold text-primary mb-0" style={{ fontSize: '0.85rem' }}>
+                                    <i className="bi bi-person-check me-2"></i>
+                                    {garanteObligatorio ? 'Garante (Obligatorio para Sistema 1)' : 'Garante'}
+                                </h6>
+                                {!garanteObligatorio && (
+                                    <Form.Check type="switch" id="requiereGarante" label="Requiere garante" name="requiereGarante"
+                                        checked={formData.requiereGarante} onChange={handleChange} disabled={isLoading} />
+                                )}
+                                {garanteObligatorio && (
+                                    <Badge bg="danger">Obligatorio</Badge>
+                                )}
                             </div>
-                            {formData.requiereGarante && (
+
+                            {(formData.requiereGarante || garanteObligatorio) && (
                                 <Row className="g-3">
                                     <Col md={6}>
                                         <Form.Group>
@@ -587,12 +737,9 @@ export const FormularioVenta = ({
                                                 placeholder="Teléfono del garante" className="rounded-3" disabled={isLoading} />
                                         </Form.Group>
                                     </Col>
-                                    {/* 🆕 Telefono 2 del garante */}
                                     <Col md={6}>
                                         <Form.Group>
-                                            <Form.Label className="small fw-semibold text-secondary">
-                                                <i className="bi bi-telephone-plus me-1"></i>Teléfono Secundario
-                                            </Form.Label>
+                                            <Form.Label className="small fw-semibold text-secondary">Teléfono Secundario</Form.Label>
                                             <Form.Control type="text" name="telefono2" value={formData.garante.telefono2} onChange={handleGaranteChange}
                                                 placeholder="Teléfono alternativo (opcional)" className="rounded-3" disabled={isLoading} />
                                         </Form.Group>
@@ -608,7 +755,7 @@ export const FormularioVenta = ({
                                         <Form.Group>
                                             <Form.Label className="small fw-semibold text-secondary">Dirección <span className="text-danger">*</span></Form.Label>
                                             <Form.Control type="text" name="direccion" value={formData.garante.direccion} onChange={handleGaranteChange}
-                                                placeholder="Dirección del garante - CON REFERENCIAS!" className="rounded-3" disabled={isLoading} />
+                                                placeholder="Dirección del garante" className="rounded-3" disabled={isLoading} />
                                         </Form.Group>
                                     </Col>
                                 </Row>
@@ -618,18 +765,17 @@ export const FormularioVenta = ({
 
                     {/* NOTAS */}
                     <div className="border rounded-3 p-3 mb-4" style={{ backgroundColor: '#f8f9fa' }}>
-                        <h6 className="fw-bold text-secondary mb-3" style={{ fontSize: '0.85rem' }}><i className="bi bi-chat-left-text me-2"></i>Notas y Observaciones de la Venta</h6>
+                        <h6 className="fw-bold text-secondary mb-3" style={{ fontSize: '0.85rem' }}><i className="bi bi-chat-left-text me-2"></i>Notas y Observaciones</h6>
                         <Form.Group className="mb-2">
                             <Form.Label className="small fw-semibold text-secondary">Agregar nota o aclaración</Form.Label>
                             <InputGroup>
                                 <Form.Control as="textarea" rows={2} value={nuevaNota} onChange={(e) => setNuevaNota(e.target.value)}
                                     placeholder="Ej: El cliente quedó en traer el comprobante mañana..." className="rounded-3" disabled={isLoading} style={{ resize: 'none' }} />
-                                <Button variant="outline-primary" className="rounded-3 ms-2 d-flex align-items-center" onClick={handleAgregarNota}
-                                    disabled={isLoading || !nuevaNota.trim()} style={{ whiteSpace: 'nowrap' }}>
+                                <Button variant="outline-primary" className="rounded-3 ms-2" onClick={handleAgregarNota}
+                                    disabled={isLoading || !nuevaNota.trim()}>
                                     <i className="bi bi-plus-lg me-1"></i>Agregar
                                 </Button>
                             </InputGroup>
-                            <Form.Text className="text-muted small"><i className="bi bi-info-circle me-1"></i>Podés agregar observaciones, aclaraciones o recordatorios de la venta.</Form.Text>
                         </Form.Group>
                         {formData.notas.length > 0 && (
                             <div className="mt-3">
@@ -643,8 +789,8 @@ export const FormularioVenta = ({
                                                 <small style={{ color: '#999', fontSize: '0.7rem' }}>{new Date(nota.fecha).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</small>
                                             </div>
                                         </div>
-                                        <Button variant="link" className="p-0 ms-2 text-decoration-none" style={{ color: '#dc3545', fontSize: '0.8rem' }}
-                                            onClick={() => handleEliminarNota(index)} disabled={isLoading}><i className="bi bi-trash3"></i></Button>
+                                        <Button variant="link" className="p-0 ms-2" style={{ color: '#dc3545' }}
+                                            onClick={() => handleEliminarNota(index)}><i className="bi bi-trash3"></i></Button>
                                     </div>
                                 ))}
                             </div>
@@ -661,23 +807,19 @@ export const FormularioVenta = ({
                             <Col md={4}><div className="p-2 bg-white rounded-3"><small className="text-muted d-block">Localidad</small><span className="fw-semibold">{formData.localidad || 'No seleccionada'}</span></div></Col>
                             <Col md={4}><div className="p-2 bg-white rounded-3"><small className="text-muted d-block">Fecha</small><span className="fw-semibold">{formData.fechaRealizada ? new Date(formData.fechaRealizada).toLocaleDateString('es-AR') : 'No seleccionada'}</span></div></Col>
                             <Col md={4}><div className="p-2 bg-white rounded-3"><small className="text-muted d-block">Producto</small><span className="fw-semibold">{formData.producto.nombre || 'Sin producto'}</span></div></Col>
-                            <Col md={4}><div className="p-2 bg-white rounded-3"><small className="text-muted d-block">Valor Producto</small><span className="fw-semibold">${formData.producto.valor.toLocaleString()}</span></div></Col>
-                            <Col md={4}><div className="p-2 bg-white rounded-3"><small className="text-muted d-block">Monto Total</small><span className="fw-bold text-success">${calcularMontoTotal().toLocaleString()}</span></div></Col>
-                            {mostrarCuotas && (
-                                <>
-                                    <Col md={4}><div className="p-2 bg-white rounded-3"><small className="text-muted d-block">Cuotas</small><span className="fw-semibold">{formData.cantidadCuotas} x ${formData.montoCuota.toLocaleString()}</span></div></Col>
-                                    <Col md={4}><div className="p-2 bg-white rounded-3"><small className="text-muted d-block">Frecuencia</small><Badge bg="dark"><i className="bi bi-arrow-repeat me-1"></i>{frecuenciaSeleccionada?.label}</Badge></div></Col>
-                                </>
+                            {equipoSeleccionado && formData.tipoVenta !== 'sistema2' && (
+                                <Col md={4}><div className="p-2 bg-white rounded-3"><small className="text-muted d-block">Origen</small><Badge bg={equipoSeleccionado.origen === 'stock' ? 'primary' : 'info'}>{equipoSeleccionado.origen}</Badge></div></Col>
                             )}
-                            {formData.notas.length > 0 && (
-                                <Col md={4}><div className="p-2 bg-white rounded-3"><small className="text-muted d-block">Notas</small><span className="fw-semibold"><i className="bi bi-chat-left-text me-1" style={{ color: '#3483FA' }}></i>{formData.notas.length} {formData.notas.length === 1 ? 'nota' : 'notas'}</span></div></Col>
+                            <Col md={4}><div className="p-2 bg-white rounded-3"><small className="text-muted d-block">Monto Total</small><span className="fw-bold text-success">${calcularMontoTotal().toLocaleString()}</span></div></Col>
+                            {garanteObligatorio && (
+                                <Col md={4}><div className="p-2 bg-white rounded-3"><small className="text-muted d-block">Garante</small><Badge bg="danger">Obligatorio</Badge></div></Col>
                             )}
                         </Row>
                     </div>
 
                     {/* Botones */}
                     <div className="d-flex gap-2 justify-content-end pt-3 mt-3 border-top">
-                        <Button variant="secondary" onClick={() => window.history.back()} className="rounded-3" disabled={isLoading}>
+                        <Button variant="secondary" onClick={onVolver} className="rounded-3" disabled={isLoading}>
                             <i className="bi bi-arrow-left me-1"></i>Volver
                         </Button>
                         <Button variant="primary" type="submit" className="rounded-3 px-4"

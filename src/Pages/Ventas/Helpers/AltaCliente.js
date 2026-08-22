@@ -19,7 +19,6 @@ export const crearCliente = async (clienteData, setClienteData, showAlert, esExi
       };
     }
 
-
     const payload = {
       nombre: clienteData.nombre.trim(),
       apellido: clienteData.apellido.trim(),
@@ -27,6 +26,8 @@ export const crearCliente = async (clienteData, setClienteData, showAlert, esExi
       direccion: clienteData.direccion.trim(),
       ...(clienteData.cuil?.trim() && { cuil: clienteData.cuil.trim() }),
       ...(clienteData.telefono?.trim() && { telefono: clienteData.telefono.trim() }),
+      // 👉 AGREGADO: telefono2
+      ...(clienteData.telefono2?.trim() && { telefono2: clienteData.telefono2.trim() }),
       ...(clienteData.email?.trim() && { email: clienteData.email.trim().toLowerCase() }),
       situacionCrediticia: parseInt(clienteData.situacionCrediticia, 10) || 1
     };
@@ -55,7 +56,7 @@ export const crearCliente = async (clienteData, setClienteData, showAlert, esExi
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      window.location.href = '/*';
       throw new Error('Sesión expirada. Por favor, iniciá sesión nuevamente.');
     }
 

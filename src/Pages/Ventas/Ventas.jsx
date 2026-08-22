@@ -8,33 +8,27 @@ import { FormularioCliente } from './Componentes/FormularioCliente';
 import { crearCliente } from './Helpers/AltaCliente';
 import { FormularioVenta } from './Componentes/FormularioVenta';
 import { crearVenta } from './Helpers/AltaVenta';
+import { generarContratoPDF } from './Helpers/GenerarContrato';
+import { ModalFirmaContrato } from './Componentes/ModalFirma';
+
 
 export const Ventas = ({ mostrarNavbar = true }) => {
   const location = useLocation();
   const usuario = location.state?.user || JSON.parse(localStorage.getItem('user') || '{}');
 
-  // ==========================================
-  // ESTADOS DE NAVEGACIÓN
-  // ==========================================
   const [vistaActiva, setVistaActiva] = useState('nueva-venta');
 
-  // ==========================================
-  // ESTADOS DE VENTA
-  // ==========================================
   const [isLoading, setIsLoading] = useState(false);
   const [clienteData, setClienteData] = useState(null);
   const [clienteId, setClienteId] = useState(null);
   const [pasoActual, setPasoActual] = useState(1);
   const [ventaCreada, setVentaCreada] = useState(null);
-  const [alert, setAlert] = useState({
-    show: false,
-    message: '',
-    variant: 'danger'
-  });
+  const [alert, setAlert] = useState({ show: false, message: '', variant: 'danger' });
 
-  // ==========================================
-  // VERIFICACIÓN DE USUARIO
-  // ==========================================
+  const [showFirma, setShowFirma] = useState(false);
+  // 🆕 Firmas guardadas una sola vez
+  const [firmasGuardadas, setFirmasGuardadas] = useState(null);
+
   if (!usuario || !usuario.rol) {
     return <Navigate to="/" replace />;
   }
@@ -44,14 +38,9 @@ export const Ventas = ({ mostrarNavbar = true }) => {
   }
 
   const showAlert = (message, variant = 'danger') => {
-    if (!message) {
-      setAlert({ show: false, message: '', variant: 'danger' });
-      return;
-    }
+    if (!message) { setAlert({ show: false, message: '', variant: 'danger' }); return; }
     setAlert({ show: true, message, variant });
-    setTimeout(() => {
-      setAlert({ show: false, message: '', variant: 'danger' });
-    }, 5000);
+    setTimeout(() => setAlert({ show: false, message: '', variant: 'danger' }), 7000);
   };
 
   const handleClienteSubmit = async (formData, esExistente = false) => {
@@ -78,7 +67,6 @@ export const Ventas = ({ mostrarNavbar = true }) => {
     setIsLoading(true);
     try {
       const result = await crearVenta(ventaData);
-      //console.log(' Venta creada:', result);
       setVentaCreada(result.data);
       setTimeout(() => {
         setIsLoading(false);
@@ -88,7 +76,7 @@ export const Ventas = ({ mostrarNavbar = true }) => {
     } catch (error) {
       console.error('❌ Error al crear venta:', error);
       setIsLoading(false);
-      throw error; // ← Re-lanza para que el formulario lo capture
+      throw error;
     }
   };
 
@@ -97,39 +85,58 @@ export const Ventas = ({ mostrarNavbar = true }) => {
     setClienteData(null);
     setClienteId(null);
     setVentaCreada(null);
+    setFirmasGuardadas(null); // 🆕 Limpiar firmas
     setAlert({ show: false, message: '', variant: 'danger' });
   };
 
-  const formatMonto = (monto) => {
-    if (!monto) return '$0';
-    return `$${monto.toLocaleString('es-AR')}`;
+  // 🆕 Guardar firmas al confirmar
+  const handleFirmarDocumentos = (firmas) => {
+    setFirmasGuardadas(firmas);
+    setShowFirma(false);
+    showAlert('Firmas guardadas correctamente. Ya podés generar los documentos.', 'success');
   };
 
-  const formatFecha = (fecha) => {
-    if (!fecha) return '-';
-    return new Date(fecha).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  // 🆕 Volver a firmar
+  const handleVolverAFirmar = () => {
+    setFirmasGuardadas(null);
+    setShowFirma(true);
   };
 
-  // ==========================================
-  // PLACEHOLDERS
-  // ==========================================
+  // 🆕 Generadores de documentos
+  const handleGenerarContrato = () => {
+    if (ventaCreada && firmasGuardadas) {
+      generarContratoPDF(ventaCreada, firmasGuardadas.cliente, firmasGuardadas.garante);
+    }
+  };
+
+  const handleGenerarAdhesion = () => {
+    // Futuro: generarFormularioAdhesionPDF(ventaCreada, firmasGuardadas)
+    showAlert('Formulario de Adhesión - Próximamente', 'info');
+  };
+
+  const handleGenerarRecibo = () => {
+    // Futuro: generarReciboEntregaPDF(ventaCreada, firmasGuardadas)
+    showAlert('Recibo de Entrega - Próximamente', 'info');
+  };
+
+  const handleGenerarGarantia = () => {
+    // Futuro: generarGarantiaPDF(ventaCreada, firmasGuardadas)
+    showAlert('Garantía - Próximamente', 'info');
+  };
+
+  const formatMonto = (monto) => !monto ? '$0' : `$${monto.toLocaleString('es-AR')}`;
+  const formatFecha = (fecha) => !fecha ? '-' : new Date(fecha).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
   const DashboardVentas = () => (
-    <div className="p-4">
-      <h3>Panel de Ventas</h3>
-      <p>Bienvenido, {usuario?.nombre}</p>
-    </div>
+    <div className="p-4"><h3>Panel de Ventas</h3><p>Bienvenido, {usuario?.nombre}</p></div>
   );
 
   const MisVentas = () => (
-    <div className="p-4">
-      <h3>Mis Ventas</h3>
-      <p>Historial de ventas - En desarrollo</p>
-    </div>
+    <div className="p-4"><h3>Mis Ventas</h3><p>Historial de ventas - En desarrollo</p></div>
   );
 
-  // ==========================================
-  // RENDERIZADO POR VISTA
-  // ==========================================
+  const tieneGarante = ventaCreada?.requiereGarante || ventaCreada?.garante?.nombre;
+
   const renderVista = () => {
     switch (vistaActiva) {
       case 'dashboard':
@@ -161,6 +168,7 @@ export const Ventas = ({ mostrarNavbar = true }) => {
                     onSubmit={handleVentaSubmit}
                     isLoading={isLoading}
                     vendedor={usuario?.nombre + ' ' + usuario?.apellido}
+                    onVolver={handleNuevaVenta}
                   />
                 )}
 
@@ -186,11 +194,54 @@ export const Ventas = ({ mostrarNavbar = true }) => {
                           {ventaCreada.cuotas && ventaCreada.cuotas.length > 0 && (
                             <Col md={6}><small className="text-muted d-block">Cuotas</small><span className="fw-semibold">{ventaCreada.cuotas.length} x {formatMonto(ventaCreada.cuotas[0]?.montoCuota)}</span></Col>
                           )}
+                          {tieneGarante && (
+                            <Col md={6}><small className="text-muted d-block">Garante</small><span className="fw-semibold">{ventaCreada.garante?.apellido}, {ventaCreada.garante?.nombre}</span></Col>
+                          )}
                         </Row>
                       </div>
-                      <Button onClick={handleNuevaVenta} className="rounded-3 px-4" style={{ backgroundColor: '#3483FA', borderColor: '#3483FA', fontWeight: '500' }}>
-                        <i className="bi bi-plus-circle me-2"></i>Nueva Venta
-                      </Button>
+
+                      {/* 🆕 Sección de documentos */}
+                      {!firmasGuardadas ? (
+                        <Button onClick={() => setShowFirma(true)} className="rounded-3 px-4"
+                          variant="success" style={{ fontWeight: '500', minWidth: '250px' }}>
+                          <i className="bi bi-pen me-2"></i>Firmar Documentos
+                        </Button>
+                      ) : (
+                        <div className="mb-4">
+                          <Badge bg="success" className="mb-3 p-2">
+                            <i className="bi bi-check-circle me-1"></i>Firmas guardadas correctamente
+                          </Badge>
+                          <div className="d-flex flex-column gap-2 align-items-center">
+                            <Button onClick={handleGenerarContrato} className="rounded-3 px-4"
+                              variant="primary" style={{ fontWeight: '500', minWidth: '250px' }}>
+                              <i className="bi bi-file-earmark-text me-2"></i>Descargar Contrato
+                            </Button>
+                            <Button onClick={handleGenerarAdhesion} className="rounded-3 px-4"
+                              variant="outline-primary" style={{ fontWeight: '500', minWidth: '250px' }}>
+                              <i className="bi bi-file-text me-2"></i>Formulario de Adhesión
+                            </Button>
+                            <Button onClick={handleGenerarRecibo} className="rounded-3 px-4"
+                              variant="outline-primary" style={{ fontWeight: '500', minWidth: '250px' }}>
+                              <i className="bi bi-receipt me-2"></i>Recibo de Entrega
+                            </Button>
+                            <Button onClick={handleGenerarGarantia} className="rounded-3 px-4"
+                              variant="outline-primary" style={{ fontWeight: '500', minWidth: '250px' }}>
+                              <i className="bi bi-shield-check me-2"></i>Garantía
+                            </Button>
+                            <Button onClick={handleVolverAFirmar} className="rounded-3 px-4"
+                              variant="outline-secondary" style={{ fontWeight: '500', minWidth: '250px' }}>
+                              <i className="bi bi-arrow-repeat me-2"></i>Volver a Firmar
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="mt-3">
+                        <Button onClick={handleNuevaVenta} className="rounded-3 px-4"
+                          style={{ backgroundColor: '#3483FA', borderColor: '#3483FA', fontWeight: '500', minWidth: '250px' }}>
+                          <i className="bi bi-plus-circle me-2"></i>Nueva Venta
+                        </Button>
+                      </div>
                     </Card.Body>
                   </Card>
                 )}
@@ -209,6 +260,13 @@ export const Ventas = ({ mostrarNavbar = true }) => {
     <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
       {mostrarNavbar && <NavBarVentas usuario={usuario} vistaActiva={vistaActiva} onCambiarVista={setVistaActiva} />}
       <div>{renderVista()}</div>
+
+      <ModalFirmaContrato
+        show={showFirma}
+        onHide={() => setShowFirma(false)}
+        venta={ventaCreada}
+        onConfirmar={handleFirmarDocumentos}
+      />
     </div>
   );
 };

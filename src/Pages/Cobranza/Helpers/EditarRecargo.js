@@ -41,7 +41,7 @@ export const editarRecargoCuota = async ({ idVenta, numeroCuota, nuevoMontoRecar
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      window.location.href = '/';
       throw new Error('Sesión expirada. Por favor, iniciá sesión nuevamente.');
     }
 

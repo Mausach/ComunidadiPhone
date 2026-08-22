@@ -308,7 +308,7 @@ export const FormularioCliente = ({
                     <Form.Group>
                       <Form.Label className="small fw-semibold text-secondary">Dirección <span className="text-danger">*</span></Form.Label>
                       <Form.Control type="text" name="direccion" value={formData.direccion} onChange={handleChange}
-                        placeholder="Calle y número" className="rounded-3" disabled={isLoading || !!clienteEncontrado} />
+                        placeholder="Calle y número - CON REFERENCIAS! " className="rounded-3" disabled={isLoading || !!clienteEncontrado} />
                     </Form.Group>
                   </div>
                 </div>

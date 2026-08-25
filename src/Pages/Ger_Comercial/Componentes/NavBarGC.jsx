@@ -12,6 +12,7 @@ export const NavBarGC = ({ usuario, vistaActiva, onCambiarVista }) => {
   const opciones = [
     { label: 'Dashboard', icon: 'bi-speedometer2', vista: 'dashboard' },
     { label: 'Ventas', icon: 'bi-cart-plus', vista: 'ventas' },
+    { label: 'Ventas Directas', icon: 'bi-cash', vista: 'ventas-contado' }, // 🆕
     { label: 'Cobranza', icon: 'bi-cash-stack', vista: 'cobranza' },
     { label: 'Eq. Canje', icon: 'bi-arrow-left-right', vista: 'equipos-canjeados' },
     { label: 'Stock', icon: 'bi-box-seam', vista: 'stock' },
@@ -40,7 +41,6 @@ export const NavBarGC = ({ usuario, vistaActiva, onCambiarVista }) => {
             alt="Logo"
             src={logo}
             width="75"
-
             className="d-inline-block align-top"
           />
           <span className="fw-bold" style={{ color: '#021C5E' }}>
@@ -63,7 +63,8 @@ export const NavBarGC = ({ usuario, vistaActiva, onCambiarVista }) => {
                   borderBottom: vistaActiva === opcion.vista
                     ? '2px solid #3483FA'
                     : '2px solid transparent',
-                  transition: 'all 0.2s ease'
+                  transition: 'all 0.2s ease',
+                  cursor: 'pointer'
                 }}
               >
                 <i className={`${opcion.icon} me-2`}></i>

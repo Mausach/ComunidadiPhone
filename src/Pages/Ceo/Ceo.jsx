@@ -9,6 +9,7 @@ import { ReportesCeo } from './Componentes/ReportesCeo';
 import { HistorialCuotas } from './Componentes/HistorialPorCliente';
 import { EquiposCanjeados } from './Componentes/EquiposCanjeados';
 import { StockEquipos } from './Componentes/StockEquipos';
+import { VentasContado } from './Componentes/VentasContado';
 
 // Placeholders para las vistas
 
@@ -27,16 +28,16 @@ export const Ceo = () => {
   const [vistaActiva, setVistaActiva] = useState('dashboard');
 
   if (!usuario || !usuario.rol) {
-    
+
     return <Navigate to="/" replace />;
   }
 
   if (usuario.rol !== 'ceo') {
-    
+
     return <Navigate to="/" replace />;
   }
 
- 
+
 
   const renderVista = () => {
     switch (vistaActiva) {
@@ -50,6 +51,9 @@ export const Ceo = () => {
         return <EquiposCanjeados />;
       case 'stock':
         return <StockEquipos />;
+      // En el switch:
+      case 'ventas-contado':
+        return <VentasContado />;
 
       default:
         return <DashboardCeo usuario={usuario} />;

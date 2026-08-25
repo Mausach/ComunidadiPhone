@@ -79,3 +79,31 @@ export const listarEquiposDisponibles = async (filtros = {}) => {
     );
   }
   };
+
+  /**
+ * 🆕 Listar ventas de contado (sin cuotas)
+ * @param {Object} filtros - { dni, nombre, fechaDesde, fechaHasta, localidad, tipoVenta, vendedor, pagina, limite }
+ */
+export const listarVentasContado = async (filtros = {}) => {
+  try {
+    const params = new URLSearchParams();
+    if (filtros.dni) params.append('dni', filtros.dni);
+    if (filtros.nombre) params.append('nombre', filtros.nombre);
+    if (filtros.localidad) params.append('localidad', filtros.localidad);
+    if (filtros.tipoVenta) params.append('tipoVenta', filtros.tipoVenta);
+    if (filtros.vendedor) params.append('vendedor', filtros.vendedor);
+    if (filtros.fechaDesde) params.append('fechaDesde', filtros.fechaDesde);
+    if (filtros.fechaHasta) params.append('fechaHasta', filtros.fechaHasta);
+    if (filtros.pagina) params.append('pagina', filtros.pagina);
+    if (filtros.limite) params.append('limite', filtros.limite);
+
+    const url = `/rep_ceo/ventas-contado${params.toString() ? '?' + params.toString() : ''}`;
+    const resp = await authApi.get(url);
+    return resp.data;
+  } catch (error) {
+    console.error('Error al listar ventas de contado:', error);
+    throw new Error(
+      error.response?.data?.message || error.response?.data?.msg || 'Error al cargar las ventas de contado'
+    );
+  }
+};

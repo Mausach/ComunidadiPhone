@@ -12,6 +12,7 @@ export const NavBarCeo = ({ usuario, vistaActiva, onCambiarVista }) => {
     { label: 'Dashboard', icon: 'bi-speedometer2', vista: 'dashboard' },
     { label: 'Reportes', icon: 'bi-graph-up-arrow', vista: 'reportes' },
     { label: 'Historial', icon: 'bi-clock-history', vista: 'historial-cuotas' },
+    { label: 'Ventas Directas', icon: 'bi-cash', vista: 'ventas-contado' }, // 🆕
     { label: 'Eq. Canje', icon: 'bi-arrow-left-right', vista: 'equipos-canjeados' },
     { label: 'Stock', icon: 'bi-box-seam', vista: 'stock' },
   ];

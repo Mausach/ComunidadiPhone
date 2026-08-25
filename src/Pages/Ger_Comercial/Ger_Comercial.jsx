@@ -10,6 +10,7 @@ import { Ventas } from '../Ventas/Ventas';
 import { Cobranza } from '../Cobranza/Cobranza';
 import { EquiposCanjeados } from '../Ceo/Componentes/EquiposCanjeados';
 import { StockEquipos } from '../Ceo/Componentes/StockEquipos';
+import { VentasContado } from '../Ceo/Componentes/VentasContado';
 
 
 // Placeholders para lo que falta crear
@@ -59,6 +60,8 @@ export const Ger_Comercial = () => {
         return <EquiposCanjeados />;
       case 'stock':
         return <StockEquipos />;
+      case 'ventas-contado':
+        return <VentasContado />;
       default:
         return <DashboardGerCom usuario={usuario} />;
     }

@@ -11,15 +11,9 @@ import { Cobranza } from '../Cobranza/Cobranza';
 import { EquiposCanjeados } from '../Ceo/Componentes/EquiposCanjeados';
 import { StockEquipos } from '../Ceo/Componentes/StockEquipos';
 import { VentasContado } from '../Ceo/Componentes/VentasContado';
+import { EquiposUnificados } from '../Ceo/Componentes/StockEquiposUnicos';
+import { ReportesNuevo } from '../Ceo/Componentes/ReportesNuevo';
 
-
-// Placeholders para lo que falta crear
-const Reportes = () => (
-  <div className="p-4">
-    <h3>Reportes</h3>
-    <p>Sección de reportes - En desarrollo</p>
-  </div>
-);
 
 const DashboardGerCom = ({ usuario }) => (
   <div className="p-4">
@@ -55,11 +49,11 @@ export const Ger_Comercial = () => {
       case 'cobranza':
         return <Cobranza mostrarNavbar={false} />;
       case 'reportes':
-        return <Reportes />;
+        return <ReportesNuevo />;
       case 'equipos-canjeados':
         return <EquiposCanjeados />;
       case 'stock':
-        return <StockEquipos />;
+        return <EquiposUnificados />;
       case 'ventas-contado':
         return <VentasContado />;
       default:

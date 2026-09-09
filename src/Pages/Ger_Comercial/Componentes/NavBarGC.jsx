@@ -11,10 +11,9 @@ export const NavBarGC = ({ usuario, vistaActiva, onCambiarVista }) => {
 
   const opciones = [
     { label: 'Dashboard', icon: 'bi-speedometer2', vista: 'dashboard' },
+    { label: 'Reportes', icon: 'bi-graph-up-arrow', vista: 'reportes' },
     { label: 'Ventas', icon: 'bi-cart-plus', vista: 'ventas' },
-    { label: 'Ventas Directas', icon: 'bi-cash', vista: 'ventas-contado' }, // 🆕
     { label: 'Cobranza', icon: 'bi-cash-stack', vista: 'cobranza' },
-    { label: 'Eq. Canje', icon: 'bi-arrow-left-right', vista: 'equipos-canjeados' },
     { label: 'Stock', icon: 'bi-box-seam', vista: 'stock' },
   ];
 

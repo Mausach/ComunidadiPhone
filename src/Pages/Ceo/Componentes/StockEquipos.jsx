@@ -4,19 +4,26 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Container, Row, Col, Card, Form, InputGroup, Badge, Button, Spinner, Alert, Modal } from 'react-bootstrap';
 import { listarStock, crearEquipo, editarEquipo, eliminarEquipo } from '../Helpers/stockApi';
 
-const localidades = ['Santiago Capital', 'La Banda', 'Añatuya', 'Monte Quemado'];
+const localidades = ['santiago capital', 'la banda', 'añatuya', 'monte quemado'];
 
 export const StockEquipos = () => {
   const [equipos, setEquipos] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [cargandoMas, setCargandoMas] = useState(false);
   const [error, setError] = useState('');
   const [alert, setAlert] = useState({ show: false, message: '', variant: 'danger' });
+
+  // Paginación
+  const [pagina, setPagina] = useState(1);
+  const [hayMas, setHayMas] = useState(false);
+  const [restantes, setRestantes] = useState(0);
+  const [totalEquipos, setTotalEquipos] = useState(0);
 
   // Filtros
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('todas');
   const [filtroDisponible, setFiltroDisponible] = useState('todas');
-  const [filtroLocalidad, setFiltroLocalidad] = useState('todas'); // 🆕
+  const [filtroLocalidad, setFiltroLocalidad] = useState('todas');
 
   // Modal crear/editar
   const [showModal, setShowModal] = useState(false);
@@ -33,19 +40,72 @@ export const StockEquipos = () => {
   const [showDelete, setShowDelete] = useState(false);
   const [equipoEliminar, setEquipoEliminar] = useState(null);
 
-  useEffect(() => { cargarDatos(); }, []);
+  useEffect(() => { cargarDatos(1); }, []);
 
-  const cargarDatos = async () => {
+  const cargarDatos = async (paginaSolicitada = 1) => {
     setIsLoading(true); setError('');
     try {
-      const data = await listarStock();
+      const data = await listarStock({
+        pagina: paginaSolicitada,
+        limite: 50,
+        ...(busqueda.trim() && { nombre: busqueda.trim() }),
+        ...(filtroEstado !== 'todas' && { estado: filtroEstado }),
+        ...(filtroDisponible !== 'todas' && { disponible: filtroDisponible })
+      });
+
       const equiposData = data?.data?.stock || [];
       setEquipos(Array.isArray(equiposData) ? equiposData : []);
+
+      const pag = data?.data?.paginacion || {};
+      setHayMas(pag.hayMas || false);
+      setRestantes(pag.restantes || 0);
+      setTotalEquipos(pag.total || 0);
+      setPagina(paginaSolicitada);
     } catch (err) {
       setError(err.message || 'Error al cargar el stock');
+      setEquipos([]);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleCargarMas = async () => {
+    setCargandoMas(true);
+    setError('');
+    try {
+      const siguientePagina = pagina + 1;
+      const data = await listarStock({
+        pagina: siguientePagina,
+        limite: 50,
+        ...(busqueda.trim() && { nombre: busqueda.trim() }),
+        ...(filtroEstado !== 'todas' && { estado: filtroEstado }),
+        ...(filtroDisponible !== 'todas' && { disponible: filtroDisponible })
+      });
+
+      const nuevosEquipos = data?.data?.stock || [];
+      setEquipos(prev => [...prev, ...(Array.isArray(nuevosEquipos) ? nuevosEquipos : [])]);
+
+      const pag = data?.data?.paginacion || {};
+      setHayMas(pag.hayMas || false);
+      setRestantes(pag.restantes || 0);
+      setPagina(siguientePagina);
+    } catch (err) {
+      setError(err.message || 'Error al cargar más equipos');
+    } finally {
+      setCargandoMas(false);
+    }
+  };
+
+  const handleBuscar = () => {
+    cargarDatos(1);
+  };
+
+  const handleLimpiar = () => {
+    setBusqueda('');
+    setFiltroEstado('todas');
+    setFiltroDisponible('todas');
+    setFiltroLocalidad('todas');
+    cargarDatos(1);
   };
 
   const showAlert = (message, variant = 'danger') => {
@@ -67,7 +127,7 @@ export const StockEquipos = () => {
     if (filtroEstado !== 'todas') resultado = resultado.filter(e => e.estado === filtroEstado);
     if (filtroDisponible === 'true') resultado = resultado.filter(e => e.disponible);
     if (filtroDisponible === 'false') resultado = resultado.filter(e => !e.disponible);
-    if (filtroLocalidad !== 'todas') resultado = resultado.filter(e => e.localidad === filtroLocalidad); // 🆕
+    if (filtroLocalidad !== 'todas') resultado = resultado.filter(e => e.localidad === filtroLocalidad);
 
     return resultado;
   }, [equipos, busqueda, filtroEstado, filtroDisponible, filtroLocalidad]);
@@ -148,7 +208,7 @@ export const StockEquipos = () => {
         showAlert('Equipo agregado al stock correctamente', 'success');
       }
       setShowModal(false);
-      cargarDatos();
+      cargarDatos(1);
     } catch (err) {
       showAlert(err.message || 'Error al guardar el equipo', 'danger');
     } finally {
@@ -164,7 +224,7 @@ export const StockEquipos = () => {
       showAlert('Equipo eliminado del stock', 'success');
       setShowDelete(false);
       setEquipoEliminar(null);
-      cargarDatos();
+      cargarDatos(1);
     } catch (err) {
       showAlert(err.message || 'Error al eliminar el equipo', 'danger');
     } finally {
@@ -182,25 +242,26 @@ export const StockEquipos = () => {
     return <Badge bg={config[estado] || 'secondary'} className="text-capitalize">{estado}</Badge>;
   };
 
-  
   const estadosEquipo = [
-    'sellado', 
-    'semi nuevo', 
-    'reacondicionado', 
-    'exhibicion', 
-    'bueno', 
-    'regular', 
+    'sellado',
+    'semi nuevo',
+    'reacondicionado',
+    'exhibicion',
+    'bueno',
+    'regular',
     'malo'
-];
+  ];
 
   if (isLoading) return <div className="text-center py-5"><Spinner animation="border" style={{ color: '#3483FA' }} /><p className="text-muted mt-3">Cargando stock...</p></div>;
-  if (error) return <Alert variant="danger" className="shadow-sm border-0" style={{ borderRadius: '8px' }}><i className="bi bi-exclamation-triangle me-2"></i>{error}<button onClick={cargarDatos} className="btn btn-link btn-sm ms-3" style={{ color: '#dc3545', textDecoration: 'underline' }}>Reintentar</button></Alert>;
+  if (error && equipos.length === 0) return <Alert variant="danger" className="shadow-sm border-0" style={{ borderRadius: '8px' }}><i className="bi bi-exclamation-triangle me-2"></i>{error}<button onClick={() => cargarDatos(1)} className="btn btn-link btn-sm ms-3" style={{ color: '#dc3545', textDecoration: 'underline' }}>Reintentar</button></Alert>;
 
   return (
     <Container fluid className="py-4">
       <div className="mb-4">
         <h3 className="fw-bold" style={{ color: '#1a1a1a' }}><i className="bi bi-box-seam me-2" style={{ color: '#3483FA' }}></i>Stock de Equipos</h3>
-        <p className="text-muted">Administrá el inventario de equipos disponibles</p>
+        <p className="text-muted">
+          Administrá el inventario de equipos disponibles · {totalEquipos} equipos en total
+        </p>
       </div>
 
       {alert.show && (
@@ -224,7 +285,7 @@ export const StockEquipos = () => {
               <Form.Select value={filtroLocalidad} onChange={(e) => setFiltroLocalidad(e.target.value)}
                 style={{ border: '1px solid #e5e5e5', borderRadius: '6px', fontSize: '0.9rem', padding: '10px 12px' }}>
                 <option value="todas">Todas las localidades</option>
-                {localidades.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+                {localidades.map(loc => <option key={loc} value={loc}>{loc.charAt(0).toUpperCase() + loc.slice(1)}</option>)}
               </Form.Select>
             </Col>
             <Col lg={2} md={6}>
@@ -244,6 +305,12 @@ export const StockEquipos = () => {
             </Col>
             <Col lg={3} md={6} className="d-flex justify-content-end align-items-center gap-2">
               <small style={{ color: '#999' }}>{equiposFiltrados.length} equipos</small>
+              <Button onClick={handleBuscar} className="rounded-3" variant="outline-primary">
+                <i className="bi bi-search me-1"></i>Buscar
+              </Button>
+              <Button onClick={handleLimpiar} className="rounded-3" variant="outline-secondary">
+                <i className="bi bi-eraser me-1"></i>Limpiar
+              </Button>
               <Button onClick={handleCrear} className="rounded-3" style={{ backgroundColor: '#3483FA', borderColor: '#3483FA', fontWeight: '500' }}>
                 <i className="bi bi-plus-circle me-2"></i>Nuevo Equipo
               </Button>
@@ -282,7 +349,7 @@ export const StockEquipos = () => {
                       </td>
                       <td style={{ color: '#666', fontSize: '0.85rem' }}>{eq.imei || '-'}</td>
                       <td style={{ color: '#666', fontSize: '0.85rem' }}>
-                        <Badge bg="light" text="dark" className="border">{eq.localidad || 'Sin localidad'}</Badge>
+                        <Badge bg="light" text="dark" className="border text-capitalize">{eq.localidad || 'Sin localidad'}</Badge>
                       </td>
                       <td>{badgeEstado(eq.estado)}</td>
                       <td style={{ color: '#666' }}>{formatoMoneda(eq.precioCompra)}</td>
@@ -310,6 +377,19 @@ export const StockEquipos = () => {
             </div>
           </Card.Body>
         </Card>
+      )}
+
+      {/* Botón Cargar más */}
+      {hayMas && (
+        <div className="text-center mt-3">
+          <Button onClick={handleCargarMas} variant="outline-primary" className="rounded-3 px-4" disabled={cargandoMas}>
+            {cargandoMas ? (
+              <><Spinner size="sm" className="me-2" />Cargando...</>
+            ) : (
+              <><i className="bi bi-arrow-down me-2"></i>Cargar más ({restantes} restantes)</>
+            )}
+          </Button>
+        </div>
       )}
 
       {/* Modal Crear/Editar */}
@@ -353,7 +433,7 @@ export const StockEquipos = () => {
                   </Form.Label>
                   <Form.Select name="localidad" value={formData.localidad} onChange={handleChange} className="rounded-3" disabled={saving}>
                     <option value="">Seleccionar localidad</option>
-                    {localidades.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+                    {localidades.map(loc => <option key={loc} value={loc}>{loc.charAt(0).toUpperCase() + loc.slice(1)}</option>)}
                   </Form.Select>
                 </Col>
               </Row>

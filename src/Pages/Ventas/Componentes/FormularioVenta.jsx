@@ -5,7 +5,6 @@ import {
 } from 'react-bootstrap';
 import { listarEquiposDisponibles } from '../../Ceo/Helpers/ReportesMensuales';
 
-
 export const FormularioVenta = ({
     clienteData,
     onSubmit,
@@ -17,9 +16,11 @@ export const FormularioVenta = ({
         tipoVenta: 'contado',
         localidad: '',
         fechaRealizada: new Date().toISOString().split('T')[0],
+        fechaEntrega: '',
         producto: {
             nombre: '',
             modelo: '',
+            capacidad: '',
             bateria: '',
             color: '',
             imei: '',
@@ -42,10 +43,10 @@ export const FormularioVenta = ({
         },
         montoCuota: 0,
         cantidadCuotas: 0,
+        cuotaEntrega: 0, // 👉 Número de cuota de entrega
         frecuencia: 'mensual',
         equipoCanje: {
             nombre: '',
-            marca: '',
             modelo: '',
             imei: '',
             color: '',
@@ -53,6 +54,8 @@ export const FormularioVenta = ({
             estado: 'bueno',
             valorTasado: 0
         },
+        descuentos: [],
+        nuevoDescuento: { monto: 0, descripcion: '' },
         notas: [],
         vendedor: vendedor || ''
     });
@@ -67,7 +70,7 @@ export const FormularioVenta = ({
     const [nuevaNota, setNuevaNota] = useState('');
     const alertRef = useRef(null);
 
-    // Tipos de venta (con sistema2)
+    // Tipos de venta
     const tiposVenta = [
         { value: 'contado', label: 'Contado' },
         { value: 'sistema1', label: 'Sistema 1 (Cuotas con entrega)' },
@@ -78,7 +81,10 @@ export const FormularioVenta = ({
     const estadosProducto = [
         { value: 'sellado', label: 'Sellado' },
         { value: 'semi nuevo', label: 'Semi Nuevo' },
-        { value: 'reacondicionado', label: 'Reacondicionado' }
+        { value: 'reacondicionado', label: 'Reacondicionado' },
+        { value: 'bueno', label: 'Bueno' },
+        { value: 'regular', label: 'Regular' },
+        { value: 'malo', label: 'Malo' }
     ];
 
     const metodosPago = [
@@ -92,10 +98,10 @@ export const FormularioVenta = ({
     const localidades = ['santiago capital', 'la banda', 'añatuya', 'monte quemado'];
 
     const frecuencias = [
-        { value: 'mensual', label: 'Mensual', descripcion: '1 cuota por mes, día 10' },
-        { value: 'quincenal', label: 'Quincenal', descripcion: '1 cuota cada 15 días' },
-        { value: 'semanal', label: 'Semanal', descripcion: '1 cuota por semana' },
-        { value: 'diario', label: 'Diario', descripcion: '1 cuota por día' }
+        { value: 'mensual', label: 'Mensual' },
+        { value: 'quincenal', label: 'Quincenal' },
+        { value: 'semanal', label: 'Semanal' },
+        { value: 'diario', label: 'Diario' }
     ];
 
     // 🆕 Efecto: forzar garante obligatorio en sistema1
@@ -119,6 +125,21 @@ export const FormularioVenta = ({
         }
     }, [formData.localidad, formData.tipoVenta]);
 
+    // 🆕 Efecto: Calcular fecha de entrega automáticamente para sistema2
+    useEffect(() => {
+        if (formData.tipoVenta === 'sistema2' && formData.cuotaEntrega > 0 && formData.cantidadCuotas > 0) {
+            const fechaCalculada = calcularFechaEntrega(
+                formData.cuotaEntrega,
+                formData.frecuencia,
+                formData.fechaRealizada
+            );
+            setFormData(prev => ({
+                ...prev,
+                fechaEntrega: fechaCalculada
+            }));
+        }
+    }, [formData.cuotaEntrega, formData.frecuencia, formData.fechaRealizada, formData.tipoVenta]);
+
     const cargarEquiposDisponibles = async () => {
         setCargandoEquipos(true);
         try {
@@ -136,7 +157,33 @@ export const FormularioVenta = ({
         }
     };
 
+    // 🆕 Función para calcular fecha de entrega según cuota y frecuencia
+    const calcularFechaEntrega = (numeroCuota, frecuencia, fechaInicio) => {
+        if (!numeroCuota || !fechaInicio) return '';
+
+        const fecha = new Date(fechaInicio + 'T00:00:00-03:00');
+
+        switch (frecuencia) {
+            case 'diario':
+                fecha.setDate(fecha.getDate() + (numeroCuota - 1));
+                break;
+            case 'semanal':
+                fecha.setDate(fecha.getDate() + (numeroCuota - 1) * 7);
+                break;
+            case 'quincenal':
+                fecha.setDate(fecha.getDate() + (numeroCuota - 1) * 15);
+                break;
+            case 'mensual':
+            default:
+                fecha.setMonth(fecha.getMonth() + (numeroCuota - 1));
+                break;
+        }
+
+        return fecha.toISOString().split('T')[0];
+    };
+
     const handleSeleccionarEquipo = (equipo) => {
+
         setEquipoSeleccionado(equipo);
         setMostrarEquipos(false);
 
@@ -145,6 +192,7 @@ export const FormularioVenta = ({
             producto: {
                 nombre: equipo.nombre || '',
                 modelo: equipo.modelo || '',
+                capacidad: equipo.capacidad || '',
                 bateria: equipo.bateria || '',
                 color: equipo.color || '',
                 imei: equipo.imei || '',
@@ -198,6 +246,27 @@ export const FormularioVenta = ({
         setFormData({ ...formData, equipoCanje: { ...formData.equipoCanje, [name]: value } });
     };
 
+    const handleAgregarDescuento = () => {
+        const { monto, descripcion } = formData.nuevoDescuento;
+        if (monto > 0 && descripcion.trim()) {
+            setFormData({
+                ...formData,
+                descuentos: [...formData.descuentos, {
+                    monto: parseFloat(monto),
+                    descripcion: descripcion.trim(),
+                    fecha: new Date().toISOString(),
+                    usuario: { nombre: vendedor || 'Sistema' }
+                }],
+                nuevoDescuento: { monto: 0, descripcion: '' }
+            });
+        }
+    };
+
+    const handleEliminarDescuento = (index) => {
+        const nuevosDescuentos = formData.descuentos.filter((_, i) => i !== index);
+        setFormData({ ...formData, descuentos: nuevosDescuentos });
+    };
+
     const handleAgregarNota = () => {
         if (nuevaNota.trim()) {
             setFormData({
@@ -229,19 +298,26 @@ export const FormularioVenta = ({
 
     const calcularTotalPagos = () => formData.pagos.reduce((total, pago) => total + (parseFloat(pago.monto) || 0), 0);
 
+    const calcularTotalDescuentos = () => formData.descuentos.reduce((total, d) => total + (parseFloat(d.monto) || 0), 0);
+
     const calcularMontoTotal = () => {
         const valorProducto = parseFloat(formData.producto.valor) || 0;
+        const totalDescuentos = calcularTotalDescuentos();
+
         if (formData.tipoVenta === 'sistema2') {
-            return (parseFloat(formData.montoCuota) || 0) * (parseInt(formData.cantidadCuotas) || 0);
+            return (parseFloat(formData.montoCuota) || 0) * (parseInt(formData.cantidadCuotas) || 0) - totalDescuentos;
         }
+
+        if (formData.tipoVenta === 'sistema1') {
+            return valorProducto - totalDescuentos;
+        }
+
         if (formData.tipoVenta === 'plan_canje') {
-            const valorCanje = parseFloat(formData.equipoCanje.valorTasado) || 0;
-            const montoCuota = parseFloat(formData.montoCuota) || 0;
-            const cantidadCuotas = parseInt(formData.cantidadCuotas) || 0;
-            if (montoCuota > 0 && cantidadCuotas > 0) return (montoCuota * cantidadCuotas) + valorCanje;
-            return valorCanje || valorProducto;
+            return valorProducto - totalDescuentos;
         }
-        return valorProducto;
+
+        // Contado
+        return valorProducto - totalDescuentos;
     };
 
     const getSaldoPendiente = () => calcularMontoTotal() - calcularTotalPagos();
@@ -250,20 +326,29 @@ export const FormularioVenta = ({
         e.preventDefault();
         e.stopPropagation();
 
+        // Validaciones básicas
         if (!formData.localidad) { showAlert('Seleccioná una localidad', 'warning'); return; }
         if (!formData.fechaRealizada) { showAlert('La fecha de la venta es obligatoria', 'warning'); return; }
         if (!formData.producto.nombre.trim()) { showAlert('Seleccioná un equipo o ingresá el nombre del producto', 'warning'); return; }
         if (!formData.producto.valor || parseFloat(formData.producto.valor) <= 0) { showAlert('El valor del producto debe ser mayor a 0', 'warning'); return; }
         if (!clienteData || !clienteData.dni) { showAlert('Datos del cliente incompletos. Por favor, verificá.', 'danger'); return; }
 
+        // Validaciones por tipo
         if (formData.tipoVenta === 'contado') {
             const pagosValidos = formData.pagos.filter(pago => pago.monto > 0 && pago.metodo);
             if (pagosValidos.length === 0) { showAlert('Venta al contado requiere al menos un pago con monto > 0', 'warning'); return; }
         }
 
-        if (['sistema1', 'sistema2'].includes(formData.tipoVenta)) {
+        if (formData.tipoVenta === 'sistema1') {
             if (!formData.montoCuota || parseFloat(formData.montoCuota) <= 0) { showAlert('El monto por cuota debe ser mayor a 0', 'warning'); return; }
             if (!formData.cantidadCuotas || parseInt(formData.cantidadCuotas) <= 0) { showAlert('La cantidad de cuotas debe ser mayor a 0', 'warning'); return; }
+        }
+
+        if (formData.tipoVenta === 'sistema2') {
+            if (!formData.montoCuota || parseFloat(formData.montoCuota) <= 0) { showAlert('El monto por cuota debe ser mayor a 0', 'warning'); return; }
+            if (!formData.cantidadCuotas || parseInt(formData.cantidadCuotas) <= 0) { showAlert('La cantidad de cuotas debe ser mayor a 0', 'warning'); return; }
+            if (!formData.cuotaEntrega || parseInt(formData.cuotaEntrega) <= 0) { showAlert('Seleccioná la cuota de entrega del equipo', 'warning'); return; }
+            if (parseInt(formData.cuotaEntrega) > parseInt(formData.cantidadCuotas)) { showAlert('La cuota de entrega no puede ser mayor a la cantidad de cuotas', 'warning'); return; }
         }
 
         if (formData.tipoVenta === 'plan_canje') {
@@ -271,7 +356,7 @@ export const FormularioVenta = ({
             if (!formData.equipoCanje.valorTasado || parseFloat(formData.equipoCanje.valorTasado) <= 0) { showAlert('El valor tasado del equipo debe ser mayor a 0', 'warning'); return; }
         }
 
-        // 🆕 Validar garante OBLIGATORIO en sistema1
+        // Validar garante
         if (formData.tipoVenta === 'sistema1') {
             const { nombre, apellido, dni, telefono, direccion } = formData.garante;
             if (!nombre.trim() || !apellido.trim() || !dni.trim() || !telefono.trim() || !direccion.trim()) {
@@ -280,16 +365,19 @@ export const FormularioVenta = ({
             }
         }
 
-        // Validar garante si está activo (para otros tipos)
         if (formData.requiereGarante && formData.tipoVenta !== 'sistema1') {
             const { nombre, apellido, dni, telefono, direccion } = formData.garante;
-            if (!nombre.trim() || !apellido.trim() || !dni.trim() || !telefono.trim() || !direccion.trim()) { showAlert('Todos los campos del garante son obligatorios', 'warning'); return; }
+            if (!nombre.trim() || !apellido.trim() || !dni.trim() || !telefono.trim() || !direccion.trim()) {
+                showAlert('Todos los campos del garante son obligatorios', 'warning');
+                return;
+            }
         }
 
         const payload = {
             tipoVenta: formData.tipoVenta,
             localidad: formData.localidad,
             fechaRealizada: formData.fechaRealizada || new Date().toISOString().split('T')[0],
+            fechaEntrega: formData.fechaEntrega || null,
             vendedor: vendedor || '',
             equipoSeleccionado: (equipoSeleccionado && formData.tipoVenta !== 'sistema2') ? {
                 _id: equipoSeleccionado._id,
@@ -307,6 +395,7 @@ export const FormularioVenta = ({
             producto: {
                 nombre: formData.producto.nombre.trim(),
                 modelo: formData.producto.modelo.trim() || '',
+                capacidad: formData.producto.capacidad || '',
                 bateria: formData.producto.bateria.trim() || '',
                 color: formData.producto.color.trim() || '',
                 imei: formData.producto.imei.trim() || '',
@@ -316,7 +405,7 @@ export const FormularioVenta = ({
             pagos: formData.pagos
                 .filter(pago => pago.monto > 0 && pago.metodo)
                 .map(pago => ({ monto: parseFloat(pago.monto), metodo: pago.metodo, notas: [] })),
-            requiereGarante: formData.tipoVenta === 'sistema1' ? true : formData.requiereGarante, // 🆕
+            requiereGarante: formData.tipoVenta === 'sistema1' ? true : formData.requiereGarante,
             garante: (formData.tipoVenta === 'sistema1' || formData.requiereGarante) ? {
                 nombre: formData.garante.nombre.trim(),
                 apellido: formData.garante.apellido.trim(),
@@ -329,6 +418,7 @@ export const FormularioVenta = ({
             } : {},
             montoCuota: parseFloat(formData.montoCuota) || 0,
             cantidadCuotas: parseInt(formData.cantidadCuotas) || 0,
+            cuotaEntrega: parseInt(formData.cuotaEntrega) || 0, // 👉 NUEVO
             frecuencia: formData.frecuencia || 'mensual',
             equipoCanje: formData.tipoVenta === 'plan_canje' ? {
                 nombre: formData.equipoCanje.nombre.trim(),
@@ -339,22 +429,27 @@ export const FormularioVenta = ({
                 estado: formData.equipoCanje.estado || 'bueno',
                 valorTasado: parseFloat(formData.equipoCanje.valorTasado)
             } : {},
+            descuentos: formData.descuentos,
             notas: formData.notas.map(nota => ({
                 texto: nota.texto, fecha: nota.fecha, tipo: nota.tipo || 'general',
                 usuario: { nombre: nota.usuario?.nombre || vendedor || 'Vendedor' }
             }))
         };
 
-        try { await onSubmit(payload); } catch (error) { showAlert(error.message || 'Error al crear la venta', 'danger'); }
+        try {
+            await onSubmit(payload);
+        } catch (error) {
+            showAlert(error.message || 'Error al crear la venta', 'danger');
+        }
     };
 
-    const mostrarCuotas = ['sistema1', 'sistema2', 'plan_canje'].includes(formData.tipoVenta);
+    const mostrarCuotas = ['sistema1', 'sistema2'].includes(formData.tipoVenta);
     const mostrarGarante = ['sistema1', 'sistema2', 'plan_canje'].includes(formData.tipoVenta);
     const mostrarEquipoCanje = formData.tipoVenta === 'plan_canje';
-    const mostrarPagos = ['contado', 'sistema1'].includes(formData.tipoVenta);
-    const frecuenciaSeleccionada = frecuencias.find(f => f.value === formData.frecuencia);
+    const mostrarPagos = ['contado', 'sistema1', 'plan_canje'].includes(formData.tipoVenta);
+    const mostrarDescuentos = true;
     const mostrarSeccionEquipos = formData.localidad && formData.tipoVenta !== 'sistema2';
-    const garanteObligatorio = formData.tipoVenta === 'sistema1'; // 🆕
+    const garanteObligatorio = formData.tipoVenta === 'sistema1';
 
     return (
         <Card className="border-0 shadow-sm" style={{ borderRadius: '16px' }}>
@@ -385,7 +480,7 @@ export const FormularioVenta = ({
                     <div className="border rounded-3 p-3 mb-4" style={{ backgroundColor: '#f8f9fa' }}>
                         <h6 className="fw-bold text-primary mb-3" style={{ fontSize: '0.85rem' }}><i className="bi bi-info-circle me-2"></i>Datos Generales</h6>
                         <Row className="g-3">
-                            <Col md={4}>
+                            <Col md={3}>
                                 <Form.Group>
                                     <Form.Label className="small fw-semibold text-secondary">Tipo de Venta <span className="text-danger">*</span></Form.Label>
                                     <Form.Select name="tipoVenta" value={formData.tipoVenta} onChange={handleChange} className="rounded-3" disabled={isLoading}>
@@ -393,7 +488,7 @@ export const FormularioVenta = ({
                                     </Form.Select>
                                 </Form.Group>
                             </Col>
-                            <Col md={4}>
+                            <Col md={3}>
                                 <Form.Group>
                                     <Form.Label className="small fw-semibold text-secondary">Localidad <span className="text-danger">*</span></Form.Label>
                                     <Form.Select name="localidad" value={formData.localidad} onChange={handleChange} className="rounded-3" disabled={isLoading}>
@@ -402,17 +497,35 @@ export const FormularioVenta = ({
                                     </Form.Select>
                                 </Form.Group>
                             </Col>
-                            <Col md={4}>
+                            <Col md={3}>
                                 <Form.Group>
                                     <Form.Label className="small fw-semibold text-secondary"><i className="bi bi-calendar me-1"></i>Fecha de la Venta</Form.Label>
                                     <Form.Control type="date" name="fechaRealizada" value={formData.fechaRealizada} onChange={handleChange}
                                         className="rounded-3" disabled={isLoading} max={new Date().toISOString().split('T')[0]} />
                                 </Form.Group>
                             </Col>
+                            <Col md={3}>
+                                <Form.Group>
+                                    <Form.Label className="small fw-semibold text-secondary">
+                                        <i className="bi bi-calendar-check me-1"></i>Fecha de Entrega
+                                    </Form.Label>
+                                    <Form.Control
+                                        type="date"
+                                        name="fechaEntrega"
+                                        value={formData.fechaEntrega}
+                                        onChange={handleChange}
+                                        className="rounded-3"
+                                        disabled={isLoading || formData.tipoVenta === 'sistema2'}
+                                    />
+                                    {formData.tipoVenta === 'sistema2' && (
+                                        <small className="text-muted">Calculada automáticamente según cuota de entrega</small>
+                                    )}
+                                </Form.Group>
+                            </Col>
                         </Row>
                     </div>
 
-                    {/* SECCIÓN: EQUIPOS DISPONIBLES (excepto sistema2) */}
+                    {/* SECCIÓN: EQUIPOS DISPONIBLES */}
                     {mostrarSeccionEquipos && (
                         <div className="border rounded-3 p-3 mb-4" style={{ backgroundColor: '#e8f0fe' }}>
                             <h6 className="fw-bold text-primary mb-3" style={{ fontSize: '0.85rem' }}>
@@ -438,7 +551,7 @@ export const FormularioVenta = ({
                                                 setEquipoSeleccionado(null);
                                                 setFormData(prev => ({
                                                     ...prev,
-                                                    producto: { nombre: '', modelo: '', bateria: '', color: '', imei: '', estado: 'sellado', valor: 0 }
+                                                    producto: { nombre: '', modelo: '', capacidad: '', bateria: '', color: '', imei: '', estado: 'sellado', valor: 0 }
                                                 }));
                                             }}>
                                                 <i className="bi bi-x-lg"></i> Quitar
@@ -538,12 +651,12 @@ export const FormularioVenta = ({
                         </Row>
                     </div>
 
-                    {/* SECCIÓN 3: CUOTAS */}
+                    {/* SECCIÓN 3: CUOTAS (sistema1 y sistema2) */}
                     {mostrarCuotas && (
                         <div className="border rounded-3 p-3 mb-4" style={{ backgroundColor: '#f8f9fa' }}>
                             <h6 className="fw-bold text-danger mb-3" style={{ fontSize: '0.85rem' }}><i className="bi bi-calendar-event me-2"></i>Configuración de Cuotas</h6>
                             <Row className="g-3">
-                                <Col md={4}>
+                                <Col md={3}>
                                     <Form.Group>
                                         <Form.Label className="small fw-semibold text-secondary">Monto por Cuota ($) <span className="text-danger">*</span></Form.Label>
                                         <InputGroup className="rounded-3">
@@ -553,14 +666,42 @@ export const FormularioVenta = ({
                                         </InputGroup>
                                     </Form.Group>
                                 </Col>
-                                <Col md={4}>
+                                <Col md={3}>
                                     <Form.Group>
                                         <Form.Label className="small fw-semibold text-secondary">Cantidad de Cuotas <span className="text-danger">*</span></Form.Label>
                                         <Form.Control type="number" name="cantidadCuotas" value={formData.cantidadCuotas} onChange={handleChange}
                                             placeholder="Ej: 12" className="rounded-3" disabled={isLoading} min={1} max={60} />
                                     </Form.Group>
                                 </Col>
-                                <Col md={4}>
+                                {formData.tipoVenta === 'sistema2' && (
+                                    <Col md={3}>
+                                        <Form.Group>
+                                            <Form.Label className="small fw-semibold text-secondary">
+                                                Cuota de Entrega <span className="text-danger">*</span>
+                                            </Form.Label>
+                                            <Form.Select
+                                                name="cuotaEntrega"
+                                                value={formData.cuotaEntrega || ''}
+                                                onChange={handleChange}
+                                                className="rounded-3"
+                                                disabled={isLoading || !formData.cantidadCuotas}
+                                            >
+                                                <option value="">Seleccionar cuota...</option>
+                                                {Array.from({ length: parseInt(formData.cantidadCuotas) || 0 }, (_, i) => i + 1).map(num => (
+                                                    <option key={num} value={num}>
+                                                        Cuota {num} {num === 1 ? '(Pago inicial)' : num === parseInt(formData.cantidadCuotas) ? '(Última)' : ''}
+                                                    </option>
+                                                ))}
+                                            </Form.Select>
+                                            <small className="text-muted">
+                                                {formData.cuotaEntrega > 0 && formData.fechaEntrega
+                                                    ? `Entrega: ${new Date(formData.fechaEntrega).toLocaleDateString('es-AR')}`
+                                                    : 'El equipo se entrega en esta cuota'}
+                                            </small>
+                                        </Form.Group>
+                                    </Col>
+                                )}
+                                <Col md={formData.tipoVenta === 'sistema2' ? 3 : 6}>
                                     <Form.Group>
                                         <Form.Label className="small fw-semibold text-secondary"><i className="bi bi-arrow-repeat me-1"></i>Frecuencia de Pago</Form.Label>
                                         <Form.Select name="frecuencia" value={formData.frecuencia} onChange={handleChange} className="rounded-3" disabled={isLoading}>
@@ -642,7 +783,10 @@ export const FormularioVenta = ({
                     {/* SECCIÓN 5: PAGOS */}
                     {mostrarPagos && (
                         <div className="border rounded-3 p-3 mb-4" style={{ backgroundColor: '#f8f9fa' }}>
-                            <h6 className="fw-bold text-success mb-3" style={{ fontSize: '0.85rem' }}><i className="bi bi-wallet2 me-2"></i>Entrega</h6>
+                            <h6 className="fw-bold text-success mb-3" style={{ fontSize: '0.85rem' }}>
+                                <i className="bi bi-wallet2 me-2"></i>
+                                {formData.tipoVenta === 'plan_canje' ? 'Entrega en Efectivo' : 'Entrega'}
+                            </h6>
                             {formData.pagos.map((pago, index) => (
                                 <Row key={index} className="g-2 mb-2 align-items-end">
                                     <Col md={4}>
@@ -683,7 +827,87 @@ export const FormularioVenta = ({
                         </div>
                     )}
 
-                    {/* SECCIÓN 6: GARANTE */}
+                    {/* SECCIÓN 6: DESCUENTOS */}
+                    {mostrarDescuentos && (
+                        <div className="border rounded-3 p-3 mb-4" style={{ backgroundColor: '#f8f9fa' }}>
+                            <h6 className="fw-bold text-warning mb-3" style={{ fontSize: '0.85rem' }}>
+                                <i className="bi bi-tag me-2"></i>Descuentos
+                            </h6>
+                            <Row className="g-3 mb-3">
+                                <Col md={4}>
+                                    <Form.Group>
+                                        <Form.Label className="small fw-semibold text-secondary">Monto ($)</Form.Label>
+                                        <InputGroup className="rounded-3">
+                                            <InputGroup.Text>$</InputGroup.Text>
+                                            <Form.Control
+                                                type="number"
+                                                value={formData.nuevoDescuento.monto}
+                                                onChange={(e) => setFormData(prev => ({
+                                                    ...prev,
+                                                    nuevoDescuento: { ...prev.nuevoDescuento, monto: parseFloat(e.target.value) || 0 }
+                                                }))}
+                                                placeholder="0"
+                                                className="rounded-end-3"
+                                                disabled={isLoading}
+                                                min={0}
+                                                step={100}
+                                            />
+                                        </InputGroup>
+                                    </Form.Group>
+                                </Col>
+                                <Col md={6}>
+                                    <Form.Group>
+                                        <Form.Label className="small fw-semibold text-secondary">Descripción</Form.Label>
+                                        <Form.Control
+                                            type="text"
+                                            value={formData.nuevoDescuento.descripcion}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                nuevoDescuento: { ...prev.nuevoDescuento, descripcion: e.target.value }
+                                            }))}
+                                            placeholder="Ej: Descuento por pago contado"
+                                            className="rounded-3"
+                                            disabled={isLoading}
+                                        />
+                                    </Form.Group>
+                                </Col>
+                                <Col md={2} className="d-flex align-items-end">
+                                    <Button
+                                        variant="outline-warning"
+                                        onClick={handleAgregarDescuento}
+                                        className="rounded-3 w-100"
+                                        disabled={isLoading || !formData.nuevoDescuento.monto || !formData.nuevoDescuento.descripcion.trim()}
+                                        style={{ height: '38px' }}
+                                    >
+                                        <i className="bi bi-plus-lg me-1"></i>Agregar
+                                    </Button>
+                                </Col>
+                            </Row>
+                            {formData.descuentos.length > 0 && (
+                                <div>
+                                    {formData.descuentos.map((descuento, index) => (
+                                        <div key={index} className="d-flex align-items-center p-2 mb-2 bg-white rounded-3 border">
+                                            <i className="bi bi-tag me-2" style={{ color: '#ffc107' }}></i>
+                                            <div className="flex-grow-1">
+                                                <small style={{ color: '#333', fontSize: '0.85rem' }}>{descuento.descripcion}</small>
+                                                <small className="text-muted ms-2">-${descuento.monto.toLocaleString()}</small>
+                                            </div>
+                                            <Button variant="link" className="p-0 ms-2" style={{ color: '#dc3545' }}
+                                                onClick={() => handleEliminarDescuento(index)}>
+                                                <i className="bi bi-trash3"></i>
+                                            </Button>
+                                        </div>
+                                    ))}
+                                    <div className="text-end mt-2">
+                                        <small className="text-muted">Total descuentos: </small>
+                                        <strong className="text-danger">-${calcularTotalDescuentos().toLocaleString()}</strong>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* SECCIÓN 7: GARANTE */}
                     {mostrarGarante && (
                         <div className="border rounded-3 p-3 mb-4" style={{ backgroundColor: '#f8f9fa' }}>
                             <div className="d-flex justify-content-between align-items-center mb-3">
@@ -811,6 +1035,12 @@ export const FormularioVenta = ({
                                 <Col md={4}><div className="p-2 bg-white rounded-3"><small className="text-muted d-block">Origen</small><Badge bg={equipoSeleccionado.origen === 'stock' ? 'primary' : 'info'}>{equipoSeleccionado.origen}</Badge></div></Col>
                             )}
                             <Col md={4}><div className="p-2 bg-white rounded-3"><small className="text-muted d-block">Monto Total</small><span className="fw-bold text-success">${calcularMontoTotal().toLocaleString()}</span></div></Col>
+                            {formData.tipoVenta === 'sistema2' && formData.cuotaEntrega > 0 && (
+                                <Col md={4}><div className="p-2 bg-white rounded-3"><small className="text-muted d-block">Entrega</small><Badge bg="info">Cuota {formData.cuotaEntrega} ({formData.fechaEntrega ? new Date(formData.fechaEntrega).toLocaleDateString('es-AR') : 'N/A'})</Badge></div></Col>
+                            )}
+                            {formData.descuentos.length > 0 && (
+                                <Col md={4}><div className="p-2 bg-white rounded-3"><small className="text-muted d-block">Descuentos</small><span className="fw-bold text-danger">-${calcularTotalDescuentos().toLocaleString()}</span></div></Col>
+                            )}
                             {garanteObligatorio && (
                                 <Col md={4}><div className="p-2 bg-white rounded-3"><small className="text-muted d-block">Garante</small><Badge bg="danger">Obligatorio</Badge></div></Col>
                             )}

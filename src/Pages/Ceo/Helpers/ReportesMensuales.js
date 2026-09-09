@@ -107,3 +107,82 @@ export const listarVentasContado = async (filtros = {}) => {
     );
   }
 };
+
+//para los reportes
+
+// src/Helpers/reportesApi.js
+export const obtenerResumenGeneral = async () => {
+  try {
+    const resp = await authApi.get('/rep_ceo/resumen-general');
+    return resp.data;
+  } catch (error) {
+    console.error('Error al obtener resumen general:', error);
+    throw new Error(error.response?.data?.message || 'Error al cargar el resumen general');
+  }
+};
+
+// En reportesApi.js
+export const obtenerVentasFinanciadas = async (anio) => {
+  try {
+    const resp = await authApi.get('/rep_ceo/ventas-financiadas', {
+      params: { anio }
+    });
+    return resp.data;
+  } catch (error) {
+    console.error('Error al obtener ventas financiadas:', error);
+    throw new Error(error.response?.data?.message || 'Error al cargar el reporte');
+  }
+};
+
+// En reportesApi.js
+export const obtenerVentasDirectasCanje = async () => {
+  try {
+    const resp = await authApi.get('/rep_ceo/ventas-directas-canje');
+    return resp.data;
+  } catch (error) {
+    console.error('Error al obtener ventas directas:', error);
+    throw new Error(error.response?.data?.message || 'Error al cargar el reporte');
+  }
+};
+
+// En reportesApi.js
+export const listarClientesReporte = async (filtros = {}) => {
+  try {
+    const params = new URLSearchParams();
+    if (filtros.nombre) params.append('nombre', filtros.nombre);
+    if (filtros.activo) params.append('activo', filtros.activo);
+    if (filtros.situacionCrediticia) params.append('situacionCrediticia', filtros.situacionCrediticia);
+    if (filtros.pagina) params.append('pagina', filtros.pagina);
+    if (filtros.limite) params.append('limite', filtros.limite);
+
+    const url = `/rep_ceo/clientes${params.toString() ? '?' + params.toString() : ''}`;
+    const resp = await authApi.get(url);
+    return resp.data;
+  } catch (error) {
+    console.error('Error al listar clientes:', error);
+    throw new Error(error.response?.data?.message || 'Error al cargar los clientes');
+  }
+};
+
+// En reportesApi.js
+export const obtenerReporteGastos = async (anio) => {
+  try {
+    const resp = await authApi.get('/rep_ceo/gastos', {
+      params: { anio }
+    });
+    return resp.data;
+  } catch (error) {
+    console.error('Error al obtener reporte de gastos:', error);
+    throw new Error(error.response?.data?.message || 'Error al cargar el reporte');
+  }
+};
+
+export const registrarGasto = async (data) => {
+  try {
+    const resp = await authApi.post('/rep_ceo/new-gastos', data);
+    return resp.data;
+  } catch (error) {
+    console.error('Error al registrar gasto:', error);
+    throw new Error(error.response?.data?.message || 'Error al registrar el gasto');
+  }
+};

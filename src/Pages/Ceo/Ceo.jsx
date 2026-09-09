@@ -10,6 +10,8 @@ import { HistorialCuotas } from './Componentes/HistorialPorCliente';
 import { EquiposCanjeados } from './Componentes/EquiposCanjeados';
 import { StockEquipos } from './Componentes/StockEquipos';
 import { VentasContado } from './Componentes/VentasContado';
+import { EquiposUnificados } from './Componentes/StockEquiposUnicos';
+import { ReportesNuevo } from './Componentes/ReportesNuevo';
 
 // Placeholders para las vistas
 
@@ -44,13 +46,13 @@ export const Ceo = () => {
       case 'dashboard':
         return <DashboardCeo usuario={usuario} />;
       case 'reportes':
-        return <ReportesCeo />;
+        return <ReportesNuevo />;
       case 'historial-cuotas':
         return <HistorialCuotas />;
       case 'equipos-canjeados':
         return <EquiposCanjeados />;
       case 'stock':
-        return <StockEquipos />;
+        return <EquiposUnificados />;
       // En el switch:
       case 'ventas-contado':
         return <VentasContado />;

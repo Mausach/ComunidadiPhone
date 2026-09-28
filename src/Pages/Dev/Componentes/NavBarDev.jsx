@@ -11,6 +11,7 @@ export const NavBarDev = ({ usuario, vistaActiva, onCambiarVista }) => {
   const opciones = [
     { label: 'Dashboard', icon: 'bi-speedometer2', vista: 'dashboard' },
     { label: 'Usuarios', icon: 'bi-people', vista: 'usuarios' },
+    { label: 'Historial', icon: 'bi-clock-history', vista: 'historial-cuotas' },
 
   ];
 

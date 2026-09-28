@@ -15,6 +15,7 @@ export const NavBarGC = ({ usuario, vistaActiva, onCambiarVista }) => {
     { label: 'Ventas', icon: 'bi-cart-plus', vista: 'ventas' },
     { label: 'Cobranza', icon: 'bi-cash-stack', vista: 'cobranza' },
     { label: 'Stock', icon: 'bi-box-seam', vista: 'stock' },
+    { label: 'Historial', icon: 'bi-clock-history', vista: 'historial-cuotas' },
   ];
 
   const handleLogout = () => {

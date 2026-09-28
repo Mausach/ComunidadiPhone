@@ -106,3 +106,16 @@ export const eliminarEquipo = async (id) => {
     throw new Error(error.response?.data?.message || 'Error al eliminar el equipo');
   }
 };
+
+export const obtenerEquipoPorVenta = async (idVenta) => {
+  try {
+    const resp = await authApi.get(`${BASE}/equipos/por-venta/${idVenta}`);
+    return resp.data;
+  } catch (error) {
+    console.error('Error al obtener equipo por venta:', error);
+    throw new Error(
+      error.response?.data?.message ||
+      'Error al obtener el equipo de la venta'
+    );
+  }
+};

@@ -13,6 +13,7 @@ import { StockEquipos } from '../Ceo/Componentes/StockEquipos';
 import { VentasContado } from '../Ceo/Componentes/VentasContado';
 import { EquiposUnificados } from '../Ceo/Componentes/StockEquiposUnicos';
 import { ReportesNuevo } from '../Ceo/Componentes/ReportesNuevo';
+import { PanelVentas } from '../Ceo/Componentes/PanelVentas';
 
 
 const DashboardGerCom = ({ usuario }) => (
@@ -56,6 +57,8 @@ export const Ger_Comercial = () => {
         return <EquiposUnificados />;
       case 'ventas-contado':
         return <VentasContado />;
+      case 'historial-cuotas':
+        return <PanelVentas usuario={usuario} />;
       default:
         return <DashboardGerCom usuario={usuario} />;
     }

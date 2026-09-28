@@ -7,6 +7,7 @@ import { CargarUsuarios } from './Helpers/CargarUsuarios';
 import { changeEstadoUsuario } from './Helpers/CambiarEstadoUsuario';
 import { ModalDetallesUsuario } from './Componentes/ModalDetallesUsuario';
 import { ModalCrearUsuario } from './Componentes/ModalCrearUsuario';
+import { PanelVentas } from '../Ceo/Componentes/PanelVentas';
 
 export const Dev = () => {
   const location = useLocation();
@@ -110,7 +111,7 @@ export const Dev = () => {
   const handleChangeEstado = async (user) => {
     try {
       const result = await changeEstadoUsuario(user, setRefreshData, navigate);
-      
+
       const estadoTexto = result.nuevoEstado ? 'activado' : 'desactivado';
       showAlert(
         `Usuario ${user.nombre} ${user.apellido} ${estadoTexto} correctamente`,
@@ -374,6 +375,8 @@ export const Dev = () => {
         return <DashboardDev />;
       case 'usuarios':
         return <VistaUsuarios />;
+      case 'historial-cuotas':
+        return <PanelVentas usuario={usuario} />;
       case 'ventas':
         return <VentasPlaceholder />;
       case 'cobranza':
@@ -390,10 +393,10 @@ export const Dev = () => {
   // ==========================================
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
-      <NavBarDev 
-        usuario={usuario} 
-        vistaActiva={vistaActiva} 
-        onCambiarVista={setVistaActiva} 
+      <NavBarDev
+        usuario={usuario}
+        vistaActiva={vistaActiva}
+        onCambiarVista={setVistaActiva}
       />
       <div>{renderVista()}</div>
 

@@ -12,6 +12,7 @@ import { StockEquipos } from './Componentes/StockEquipos';
 import { VentasContado } from './Componentes/VentasContado';
 import { EquiposUnificados } from './Componentes/StockEquiposUnicos';
 import { ReportesNuevo } from './Componentes/ReportesNuevo';
+import { PanelVentas } from './Componentes/PanelVentas';
 
 // Placeholders para las vistas
 
@@ -48,8 +49,8 @@ export const Ceo = () => {
       case 'reportes':
         return <ReportesNuevo />;
       case 'historial-cuotas':
-        return <HistorialCuotas />;
-      case 'equipos-canjeados':
+        return <PanelVentas usuario={usuario} />; ;
+      case 'equipos-canjeados': //creo que ya no esta
         return <EquiposCanjeados />;
       case 'stock':
         return <EquiposUnificados />;

@@ -186,3 +186,88 @@ export const registrarGasto = async (data) => {
     throw new Error(error.response?.data?.message || 'Error al registrar el gasto');
   }
 };
+
+/**
+ * Obtiene el panel de ventas para el CEO con filtros y paginación
+ * @param {Object} filtros - { tipoVenta, localidad, conducta, busqueda, pagina, limite }
+ */
+export const obtenerRepVentas = async (filtros = {}) => {
+  try {
+    const params = new URLSearchParams();
+
+    if (filtros.tipoVenta) params.append('tipoVenta', filtros.tipoVenta);
+    if (filtros.localidad) params.append('localidad', filtros.localidad);
+    if (filtros.conducta) params.append('conducta', filtros.conducta);
+    if (filtros.busqueda) params.append('busqueda', filtros.busqueda);
+    if (filtros.pagina) params.append('pagina', filtros.pagina);
+    if (filtros.limite) params.append('limite', filtros.limite);
+
+    const url = `/rep_ceo/rep-vtas${params.toString() ? '?' + params.toString() : ''}`;
+    const resp = await authApi.get(url);
+    return resp.data;
+  } catch (error) {
+    console.error('Error al obtener panel de ventas:', error);
+    throw new Error(
+      error.response?.data?.message ||
+      error.response?.data?.msg ||
+      'Error al cargar las ventas'
+    );
+  }
+};
+
+/**
+ * Agrega documentación a una venta (solo si NO tiene)
+ */
+export const agregarDocumentacionVenta = async (idVenta, data) => {
+  try {
+    const resp = await authApi.post(
+      `/rep_ceo/agregar-documentacion/${idVenta}`,
+      data
+    );
+    return resp.data;
+  } catch (error) {
+    console.error('Error al agregar documentación:', error);
+    throw new Error(
+      error.response?.data?.message ||
+      error.response?.data?.msg ||
+      'Error al agregar la documentación'
+    );
+  }
+};
+
+/**
+ * Actualiza documentación de una venta (solo si YA tiene)
+ */
+export const actualizarDocumentacionVenta = async (idVenta, data) => {
+  try {
+    const resp = await authApi.put(
+      `/rep_ceo/actualizar-documentacion/${idVenta}`,
+      data
+    );
+    return resp.data;
+  } catch (error) {
+    console.error('Error al actualizar documentación:', error);
+    throw new Error(
+      error.response?.data?.message ||
+      error.response?.data?.msg ||
+      'Error al actualizar la documentación'
+    );
+  }
+};
+
+/**
+ * Obtiene documentación de una venta
+ */
+export const obtenerDocumentacionVenta = async (idVenta) => {
+  try {
+    const resp = await authApi.get(`/rep_ceo/documentacion/${idVenta}`);
+    return resp.data;
+  } catch (error) {
+    console.error('Error al obtener documentación:', error);
+    throw new Error(
+      error.response?.data?.message ||
+      error.response?.data?.msg ||
+      'Error al obtener la documentación'
+    );
+  }
+};

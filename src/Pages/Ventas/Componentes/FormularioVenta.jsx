@@ -39,11 +39,13 @@ export const FormularioVenta = ({
             telefono: '',
             telefono2: '',
             email: '',
-            direccion: ''
+            direccion: '',
+            relacion: '',      // 👈 NUEVO
+            ocupacion: ''      // 👈 NUEVO
         },
         montoCuota: 0,
         cantidadCuotas: 0,
-        cuotaEntrega: 0, // 👉 Número de cuota de entrega
+        cuotaEntrega: 0,
         frecuencia: 'mensual',
         equipoCanje: {
             nombre: '',
@@ -104,7 +106,7 @@ export const FormularioVenta = ({
         { value: 'diario', label: 'Diario' }
     ];
 
-    // 🆕 Efecto: forzar garante obligatorio en sistema1
+    // Efecto: forzar garante obligatorio en sistema1
     useEffect(() => {
         if (formData.tipoVenta === 'sistema1') {
             setFormData(prev => ({
@@ -125,7 +127,7 @@ export const FormularioVenta = ({
         }
     }, [formData.localidad, formData.tipoVenta]);
 
-    // 🆕 Efecto: Calcular fecha de entrega automáticamente para sistema2
+    // Efecto: Calcular fecha de entrega automáticamente para sistema2
     useEffect(() => {
         if (formData.tipoVenta === 'sistema2' && formData.cuotaEntrega > 0 && formData.cantidadCuotas > 0) {
             const fechaCalculada = calcularFechaEntrega(
@@ -157,7 +159,6 @@ export const FormularioVenta = ({
         }
     };
 
-    // 🆕 Función para calcular fecha de entrega según cuota y frecuencia
     const calcularFechaEntrega = (numeroCuota, frecuencia, fechaInicio) => {
         if (!numeroCuota || !fechaInicio) return '';
 
@@ -183,7 +184,6 @@ export const FormularioVenta = ({
     };
 
     const handleSeleccionarEquipo = (equipo) => {
-
         setEquipoSeleccionado(equipo);
         setMostrarEquipos(false);
 
@@ -356,19 +356,28 @@ export const FormularioVenta = ({
             if (!formData.equipoCanje.valorTasado || parseFloat(formData.equipoCanje.valorTasado) <= 0) { showAlert('El valor tasado del equipo debe ser mayor a 0', 'warning'); return; }
         }
 
-        // Validar garante
+        // Validar garante - SISTEMA 1 (obligatorio + campos nuevos)
         if (formData.tipoVenta === 'sistema1') {
-            const { nombre, apellido, dni, telefono, direccion } = formData.garante;
+            const { nombre, apellido, dni, telefono, direccion, relacion, ocupacion } = formData.garante;
             if (!nombre.trim() || !apellido.trim() || !dni.trim() || !telefono.trim() || !direccion.trim()) {
                 showAlert('El garante es obligatorio para Sistema 1. Completá todos sus datos.', 'warning');
                 return;
             }
+            if (!relacion.trim() || !ocupacion.trim()) {
+                showAlert('Completá la relación con el solicitante y la ocupación del garante.', 'warning');
+                return;
+            }
         }
 
+        // Validar garante - Otros tipos (si está activo)
         if (formData.requiereGarante && formData.tipoVenta !== 'sistema1') {
-            const { nombre, apellido, dni, telefono, direccion } = formData.garante;
+            const { nombre, apellido, dni, telefono, direccion, relacion, ocupacion } = formData.garante;
             if (!nombre.trim() || !apellido.trim() || !dni.trim() || !telefono.trim() || !direccion.trim()) {
                 showAlert('Todos los campos del garante son obligatorios', 'warning');
+                return;
+            }
+            if (!relacion.trim() || !ocupacion.trim()) {
+                showAlert('Completá la relación con el solicitante y la ocupación del garante.', 'warning');
                 return;
             }
         }
@@ -414,11 +423,13 @@ export const FormularioVenta = ({
                 telefono: formData.garante.telefono.trim(),
                 telefono2: formData.garante.telefono2.trim(),
                 email: formData.garante.email.trim() || '',
-                direccion: formData.garante.direccion.trim()
+                direccion: formData.garante.direccion.trim(),
+                relacion: formData.garante.relacion.trim(),   // 👈 NUEVO
+                ocupacion: formData.garante.ocupacion.trim()  // 👈 NUEVO
             } : {},
             montoCuota: parseFloat(formData.montoCuota) || 0,
             cantidadCuotas: parseInt(formData.cantidadCuotas) || 0,
-            cuotaEntrega: parseInt(formData.cuotaEntrega) || 0, // 👉 NUEVO
+            cuotaEntrega: parseInt(formData.cuotaEntrega) || 0,
             frecuencia: formData.frecuencia || 'mensual',
             equipoCanje: formData.tipoVenta === 'plan_canje' ? {
                 nombre: formData.equipoCanje.nombre.trim(),
@@ -961,6 +972,27 @@ export const FormularioVenta = ({
                                                 placeholder="Teléfono del garante" className="rounded-3" disabled={isLoading} />
                                         </Form.Group>
                                     </Col>
+
+                                    {/* 👈 NUEVOS CAMPOS */}
+                                    <Col md={6}>
+                                        <Form.Group>
+                                            <Form.Label className="small fw-semibold text-secondary">
+                                                Relación con el solicitante <span className="text-danger">*</span>
+                                            </Form.Label>
+                                            <Form.Control type="text" name="relacion" value={formData.garante.relacion} onChange={handleGaranteChange}
+                                                placeholder="Ej: Familiar, Amigo, Vecino..." className="rounded-3" disabled={isLoading} />
+                                        </Form.Group>
+                                    </Col>
+                                    <Col md={6}>
+                                        <Form.Group>
+                                            <Form.Label className="small fw-semibold text-secondary">
+                                                Ocupación / Profesión <span className="text-danger">*</span>
+                                            </Form.Label>
+                                            <Form.Control type="text" name="ocupacion" value={formData.garante.ocupacion} onChange={handleGaranteChange}
+                                                placeholder="Ej: Empleado, Comerciante, Docente..." className="rounded-3" disabled={isLoading} />
+                                        </Form.Group>
+                                    </Col>
+
                                     <Col md={6}>
                                         <Form.Group>
                                             <Form.Label className="small fw-semibold text-secondary">Teléfono Secundario</Form.Label>

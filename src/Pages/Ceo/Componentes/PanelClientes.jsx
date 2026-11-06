@@ -1,13 +1,18 @@
-// src/Pages/Ceo/Componentes/reportes/PanelClientes.jsx
-
-import React, { useState, useEffect, useRef } from 'react';
-import { Row, Col, Card, Form, InputGroup, Badge, Button, Spinner, Alert, Modal, Table, ListGroup } from 'react-bootstrap';
-import { listarClientesReporte } from '../Helpers/ReportesMensuales';
 
 
 const formatoFecha = (f) => !f ? '-' : new Date(f).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-export const PanelClientes = () => {
+
+import React, { useState, useEffect, useRef } from 'react';
+import { Row, Col, Card, Form, InputGroup, Badge, Button, Spinner, Alert, Modal, Table } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
+import { listarClientesReporte, obtenerRepVentas } from '../Helpers/ReportesMensuales';
+import { VentaCard } from './CardVentas';
+import { ModalEditarCliente } from './ModalEditarCliente'; // 👈 NUEVO IMPORT
+
+
+export const PanelClientes = ({ usuario }) => {
+  const navigate = useNavigate(); // 👈 Para pasar al modal
   const [clientes, setClientes] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [cargandoMas, setCargandoMas] = useState(false);
@@ -27,9 +32,24 @@ export const PanelClientes = () => {
   const [filtroActivo, setFiltroActivo] = useState('todas');
   const [filtroSituacion, setFiltroSituacion] = useState('todas');
 
-  // Modal detalle
+  // Modal detalle cliente
   const [showModalCliente, setShowModalCliente] = useState(false);
   const [clienteDetalle, setClienteDetalle] = useState(null);
+
+  // Modal editar cliente
+  const [showEditarCliente, setShowEditarCliente] = useState(false);
+  const [clienteEditar, setClienteEditar] = useState(null);
+
+  // Modal ventas del cliente
+  const [showModalVentas, setShowModalVentas] = useState(false);
+  const [clienteVentas, setClienteVentas] = useState(null);
+  const [ventasCliente, setVentasCliente] = useState([]);
+  const [loadingVentas, setLoadingVentas] = useState(false);
+  const [errorVentas, setErrorVentas] = useState('');
+  const [paginaVentas, setPaginaVentas] = useState(1);
+  const [hayMasVentas, setHayMasVentas] = useState(false);
+  const [totalVentas, setTotalVentas] = useState(0);
+  const [cargandoMasVentas, setCargandoMasVentas] = useState(false);
 
   useEffect(() => {
     cargarDatos(1);
@@ -117,6 +137,96 @@ export const PanelClientes = () => {
     setShowModalCliente(true);
   };
 
+  // ==========================================
+  // EDITAR CLIENTE
+  // ==========================================
+  const handleEditarCliente = (cliente) => {
+    setClienteEditar(cliente);
+    setShowEditarCliente(true);
+  };
+
+  const handleCerrarEditarCliente = () => {
+    setShowEditarCliente(false);
+    setClienteEditar(null);
+  };
+
+  const handleClienteActualizado = () => {
+    // Recargar la lista de clientes
+    cargarDatos(pagina);
+    
+    // Si el modal de detalle estaba abierto, actualizarlo o cerrarlo
+    if (clienteDetalle) {
+      // Opcional: recargar el detalle del cliente actualizado
+      // Como no hay endpoint para obtener un cliente individual, cerramos el modal
+      setShowModalCliente(false);
+      setClienteDetalle(null);
+    }
+    
+    showAlert('Cliente actualizado correctamente', 'success');
+  };
+
+  // ==========================================
+  // VENTAS DEL CLIENTE
+  // ==========================================
+  const cargarVentasCliente = async (cliente, paginaSolicitada = 1) => {
+    if (paginaSolicitada === 1) {
+      setLoadingVentas(true);
+      setVentasCliente([]);
+      setErrorVentas('');
+    } else {
+      setCargandoMasVentas(true);
+    }
+
+    try {
+      const data = await obtenerRepVentas({
+        dni: cliente.dni,
+        pagina: paginaSolicitada,
+        limite: 10
+      });
+
+      const nuevas = data?.data?.ventas || [];
+      const pag = data?.data?.paginacion || {};
+
+      setVentasCliente(prev =>
+        paginaSolicitada === 1 ? nuevas : [...prev, ...nuevas]
+      );
+      setHayMasVentas(pag.hayMas || false);
+      setTotalVentas(pag.total || 0);
+      setPaginaVentas(paginaSolicitada);
+    } catch (err) {
+      setErrorVentas(err.message || 'Error al cargar las ventas del cliente');
+    } finally {
+      setLoadingVentas(false);
+      setCargandoMasVentas(false);
+    }
+  };
+
+  const handleVerVentas = (cliente) => {
+    setClienteVentas(cliente);
+    setShowModalVentas(true);
+    setPaginaVentas(1);
+    setHayMasVentas(false);
+    setTotalVentas(0);
+    cargarVentasCliente(cliente, 1);
+  };
+
+  const handleCerrarModalVentas = () => {
+    setShowModalVentas(false);
+    setClienteVentas(null);
+    setVentasCliente([]);
+    setErrorVentas('');
+  };
+
+  const handleCargarMasVentas = () => {
+    if (!clienteVentas) return;
+    cargarVentasCliente(clienteVentas, paginaVentas + 1);
+  };
+
+  const handleRefreshVentas = () => {
+    if (!clienteVentas) return;
+    cargarVentasCliente(clienteVentas, 1);
+  };
+
   const badgeSituacion = (situacion) => {
     const config = {
       1: { bg: 'success', label: 'Excelente', icon: 'bi-star-fill' },
@@ -156,6 +266,21 @@ export const PanelClientes = () => {
 
   return (
     <div>
+      {/* Alert global */}
+      {alert.show && (
+        <Alert
+          ref={alertRef}
+          variant={alert.variant}
+          className="shadow-sm border-0 mb-3"
+          style={{ borderRadius: '8px' }}
+          dismissible
+          onClose={() => setAlert({ show: false, message: '', variant: 'danger' })}
+        >
+          <i className={`bi bi-${alert.variant === 'success' ? 'check-circle' : 'info-circle'} me-2`}></i>
+          {alert.message}
+        </Alert>
+      )}
+
       {/* Cards de Resumen */}
       <Row className="g-3 mb-4">
         <Col lg={4} md={6}>
@@ -215,9 +340,10 @@ export const PanelClientes = () => {
                   <i className="bi bi-search" style={{ color: '#999' }}></i>
                 </InputGroup.Text>
                 <Form.Control
-                  placeholder="Buscar por nombre, apellido, DNI..."
+                  placeholder="Buscar por nombre, apellido o DNI..."
                   value={busqueda}
                   onChange={(e) => setBusqueda(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleBuscar()}
                   style={{ border: '1px solid #e5e5e5', fontSize: '0.9rem', padding: '10px 12px' }}
                 />
               </InputGroup>
@@ -272,7 +398,7 @@ export const PanelClientes = () => {
                     <th>Contacto</th>
                     <th>Situación Crediticia</th>
                     <th>Estado</th>
-                    <th>Acción</th>
+                    <th>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -309,10 +435,16 @@ export const PanelClientes = () => {
                         </Badge>
                       </td>
                       <td>
-                        <Button variant="outline-primary" size="sm" className="rounded-3"
-                          onClick={() => handleVerCliente(cliente)} title="Ver detalles">
-                          <i className="bi bi-eye"></i>
-                        </Button>
+                        <div className="d-flex gap-1">
+                          <Button variant="outline-primary" size="sm" className="rounded-3"
+                            onClick={() => handleVerCliente(cliente)} title="Ver detalles">
+                            <i className="bi bi-eye"></i>
+                          </Button>
+                          <Button variant="outline-success" size="sm" className="rounded-3"
+                            onClick={() => handleVerVentas(cliente)} title="Ver ventas del cliente">
+                            <i className="bi bi-file-earmark-bar-graph"></i>
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -412,12 +544,128 @@ export const PanelClientes = () => {
             </>
           )}
         </Modal.Body>
-        <Modal.Footer className="border-0 pt-0">
+        <Modal.Footer className="border-0 pt-0 d-flex justify-content-between">
+          <Button
+            variant="outline-warning"
+            className="rounded-3"
+            onClick={() => handleEditarCliente(clienteDetalle)}
+            title="Editar datos del cliente"
+          >
+            <i className="bi bi-pencil-square me-1"></i>Editar
+          </Button>
           <Button variant="secondary" onClick={() => setShowModalCliente(false)} className="rounded-3">
             Cerrar
           </Button>
         </Modal.Footer>
       </Modal>
+
+      {/* Modal Ventas del Cliente */}
+      <Modal show={showModalVentas} onHide={handleCerrarModalVentas} size="xl" centered scrollable>
+        <Modal.Header closeButton className="border-0 pb-0">
+          <Modal.Title className="fw-bold" style={{ color: '#1a1a1a' }}>
+            <i className="bi bi-file-earmark-bar-graph me-2" style={{ color: '#3483FA' }}></i>
+            Ventas del Cliente
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {clienteVentas && (
+            <div
+              className="d-flex align-items-center gap-3 p-3 mb-3 rounded-3"
+              style={{ backgroundColor: '#f8f9fa' }}
+            >
+              <div
+                className="d-flex align-items-center justify-content-center rounded-circle"
+                style={{
+                  width: '48px', height: '48px',
+                  backgroundColor: '#e8f0fe', color: '#3483FA',
+                  fontWeight: 'bold', fontSize: '1rem'
+                }}
+              >
+                {clienteVentas.nombre?.charAt(0)}{clienteVentas.apellido?.charAt(0)}
+              </div>
+              <div className="flex-grow-1">
+                <div className="fw-bold" style={{ color: '#1a1a1a' }}>{clienteVentas.nombreCompleto}</div>
+                <small className="text-muted">
+                  DNI: {clienteVentas.dni} · {totalVentas} venta{totalVentas !== 1 ? 's' : ''}
+                </small>
+              </div>
+            </div>
+          )}
+
+          {loadingVentas && (
+            <div className="text-center py-5">
+              <Spinner animation="border" style={{ color: '#3483FA' }} />
+              <p className="text-muted mt-3">Cargando ventas...</p>
+            </div>
+          )}
+
+          {!loadingVentas && errorVentas && (
+            <Alert variant="danger" className="border-0" style={{ borderRadius: '8px' }}>
+              <i className="bi bi-exclamation-triangle me-2"></i>{errorVentas}
+              <button
+                onClick={() => cargarVentasCliente(clienteVentas, 1)}
+                className="btn btn-link btn-sm ms-3"
+                style={{ color: '#dc3545', textDecoration: 'underline' }}
+              >
+                Reintentar
+              </button>
+            </Alert>
+          )}
+
+          {!loadingVentas && !errorVentas && ventasCliente.length === 0 && (
+            <div className="text-center py-5">
+              <i className="bi bi-inbox" style={{ fontSize: '3rem', color: '#ccc' }}></i>
+              <p className="text-muted mt-3">Este cliente no tiene ventas registradas</p>
+            </div>
+          )}
+
+          {!loadingVentas && !errorVentas && ventasCliente.length > 0 && (
+            <>
+              {ventasCliente.map(v => (
+                <VentaCard
+                  key={v._id}
+                  venta={v}
+                  usuario={usuario}
+                  onRefresh={handleRefreshVentas}
+                />
+              ))}
+
+              {hayMasVentas && (
+                <div className="text-center mt-3">
+                  <Button
+                    onClick={handleCargarMasVentas}
+                    variant="outline-primary"
+                    className="rounded-3 px-4"
+                    disabled={cargandoMasVentas}
+                  >
+                    {cargandoMasVentas ? (
+                      <><Spinner size="sm" className="me-2" />Cargando...</>
+                    ) : (
+                      <><i className="bi bi-arrow-down me-2"></i>Cargar más ventas</>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </Modal.Body>
+        <Modal.Footer className="border-0 pt-0">
+          <Button variant="secondary" onClick={handleCerrarModalVentas} className="rounded-3">
+            Cerrar
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* ==========================================
+          MODAL EDITAR CLIENTE
+          ========================================== */}
+      <ModalEditarCliente
+        show={showEditarCliente}
+        onHide={handleCerrarEditarCliente}
+        cliente={clienteEditar}
+        setRefreshData={handleClienteActualizado}
+        navigate={navigate}
+      />
     </div>
   );
 };

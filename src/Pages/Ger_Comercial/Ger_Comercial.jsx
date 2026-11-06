@@ -43,24 +43,17 @@ export const Ger_Comercial = () => {
   // Renderizar la vista según la opción seleccionada
   const renderVista = () => {
     switch (vistaActiva) {
-      case 'dashboard':
-        return <DashboardGerCom usuario={usuario} />;
+      
       case 'ventas':
         return <Ventas mostrarNavbar={false} />;
       case 'cobranza':
         return <Cobranza mostrarNavbar={false} />;
       case 'reportes':
         return <ReportesNuevo />;
-      case 'equipos-canjeados':
-        return <EquiposCanjeados />;
       case 'stock':
         return <EquiposUnificados />;
-      case 'ventas-contado':
-        return <VentasContado />;
-      case 'historial-cuotas':
-        return <PanelVentas usuario={usuario} />;
       default:
-        return <DashboardGerCom usuario={usuario} />;
+        return <ReportesNuevo />;
     }
   };
 

@@ -400,7 +400,7 @@ export const generarReciboPago = (venta) => {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9.5);
   doc.setTextColor(azulOscuro);
-  doc.text("4. VALIDEZ, CONFORMIDAD Y FIRMA DIGITAL", MARGIN_LEFT, y);
+  doc.text("4. VALIDEZ, CONFORMIDAD Y FIRMA ELECTRONICA", MARGIN_LEFT, y);
   y += 5;
 
   doc.setFont("helvetica", "normal");
@@ -446,7 +446,7 @@ export const generarReciboPago = (venta) => {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7.5);
   doc.setTextColor(azul);
-  doc.text("FIRMA AUTORIZADA Ley N° 25.506 — Firma Digital", PAGE_WIDTH / 2, y, { align: "center" });
+  doc.text("FIRMA AUTORIZADA Ley N° 25.506 — Firma Electronica", PAGE_WIDTH / 2, y, { align: "center" });
 
   // ============================================================
   // PIE DE PÁGINA

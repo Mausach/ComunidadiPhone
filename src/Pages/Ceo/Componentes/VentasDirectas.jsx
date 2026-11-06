@@ -1,11 +1,8 @@
-
-import { obtenerVentasDirectasCanje } from '../Helpers/ReportesMensuales';
-
 // src/Pages/Ceo/Componentes/reportes/VentasDirectas.jsx
 
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Badge, Button, Spinner, Alert, Modal, Table } from 'react-bootstrap';
-import { Doughnut, Bar } from 'react-chartjs-2';
+import { Row, Col, Card, Badge, Button, Spinner, Alert, Modal, Table, Form } from 'react-bootstrap';
+import { Doughnut, Bar, Line } from 'react-chartjs-2';
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -14,9 +11,11 @@ import {
     Title,
     Tooltip,
     Legend,
-    ArcElement
+    ArcElement,
+    PointElement,
+    LineElement
 } from 'chart.js';
-
+import { obtenerVentasDirectasCanje } from '../Helpers/ReportesMensuales';
 
 ChartJS.register(
     CategoryScale,
@@ -25,7 +24,9 @@ ChartJS.register(
     Title,
     Tooltip,
     Legend,
-    ArcElement
+    ArcElement,
+    PointElement,
+    LineElement
 );
 
 const formatoMoneda = (v) => !v && v !== 0 ? '$0' : new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(v);
@@ -42,33 +43,47 @@ const metodosPagoConfig = {
 };
 
 export const VentasDirectas = () => {
+  const [anio, setAnio] = useState(new Date().getFullYear());
   const [datos, setDatos] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   
-  // Filtros
-  const [filtroTipo, setFiltroTipo] = useState('todas');
-  const [busqueda, setBusqueda] = useState('');
-  
-  // Modal detalle
+  // Modales
+  const [showModalMes, setShowModalMes] = useState(false);
+  const [mesSeleccionado, setMesSeleccionado] = useState(null);
+  const [ventasDelMes, setVentasDelMes] = useState([]);
+
   const [showModalVenta, setShowModalVenta] = useState(false);
   const [ventaDetalle, setVentaDetalle] = useState(null);
 
+  const anios = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
+
   useEffect(() => {
     cargarDatos();
-  }, []);
+  }, [anio]);
 
   const cargarDatos = async () => {
     setIsLoading(true);
     setError('');
     try {
-      const resp = await obtenerVentasDirectasCanje();
+      const resp = await obtenerVentasDirectasCanje(anio);
       setDatos(resp.data);
     } catch (err) {
       setError(err.message || 'Error al cargar el reporte');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleVerMes = (mes) => {
+    setMesSeleccionado(mes);
+    // Filtrar ventas que pertenecen a ese mes (por fechaRealizada)
+    const ventasFiltradas = datos.ventas.filter(venta => {
+      const fecha = new Date(venta.fechaRealizada);
+      return fecha.getMonth() + 1 === mes.mes;
+    });
+    setVentasDelMes(ventasFiltradas);
+    setShowModalMes(true);
   };
 
   const handleVerVenta = (venta) => {
@@ -98,108 +113,64 @@ export const VentasDirectas = () => {
 
   if (!datos) return null;
 
-  // Filtrar ventas
-  const ventasFiltradas = datos.ventas.filter(venta => {
-    if (filtroTipo !== 'todas' && venta.tipoVenta !== filtroTipo) return false;
-    if (busqueda.trim()) {
-      const t = busqueda.toLowerCase();
-      const nombreCompleto = `${venta.cliente?.nombre} ${venta.cliente?.apellido}`.toLowerCase();
-      if (!nombreCompleto.includes(t) && !venta.cliente?.dni?.includes(t) && !venta.producto?.nombre?.toLowerCase().includes(t)) {
-        return false;
-      }
-    }
-    return true;
-  });
-
-  // Datos para gráfico de torta
-  const datosTorta = {
-    labels: ['Contado', 'Plan Canje'],
+  // ==========================================
+  // DATOS PARA GRÁFICOS
+  // ==========================================
+  const datosGraficoBarras = {
+    labels: datos.resumenAnual.map(m => m.nombre),
     datasets: [
       {
-        data: [
-          datos.resumen.contado.cantidad,
-          datos.resumen.plan_canje.cantidad
-        ],
-        backgroundColor: ['#00A650', '#FFE600'],
-        borderWidth: 2,
-        borderColor: '#fff',
-        hoverOffset: 10
-      }
-    ]
-  };
-
-  // Datos para gráfico de barras (montos)
-  const datosBarras = {
-    labels: ['Contado', 'Plan Canje'],
-    datasets: [
-      {
-        label: 'Monto Pagado',
-        data: [
-          datos.resumen.contado.montoPagado,
-          datos.resumen.plan_canje.montoPagado
-        ],
-        backgroundColor: '#00A650',
-        borderRadius: 8,
+        label: 'Total Facturado',
+        data: datos.resumenAnual.map(m => m.totalVentas),
+        backgroundColor: '#3483FA',
+        borderRadius: 6,
       },
       {
-        label: 'Descuentos',
-        data: [
-          datos.resumen.contado.descuentos,
-          datos.resumen.plan_canje.descuentos
-        ],
-        backgroundColor: '#FF7733',
-        borderRadius: 8,
+        label: 'Total Cobrado',
+        data: datos.resumenAnual.map(m => m.totalCobrado),
+        backgroundColor: '#00A650',
+        borderRadius: 6,
       }
     ]
   };
 
-  const opcionesTorta = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'bottom',
-        labels: {
-          usePointStyle: true,
-          padding: 15,
-          font: { size: 11 }
-        }
+  const datosGraficoLinea = {
+    labels: datos.resumenAnual.map(m => m.nombre),
+    datasets: [
+      {
+        label: 'Cantidad de Ventas',
+        data: datos.resumenAnual.map(m => m.cantidadVentas),
+        borderColor: '#6F42C1',
+        backgroundColor: 'rgba(111, 66, 193, 0.1)',
+        tension: 0.4,
+        fill: true,
+        pointBackgroundColor: '#6F42C1',
+        pointRadius: 5,
+        pointHoverRadius: 8
       }
-    },
-    cutout: '60%'
+    ]
   };
 
   const opcionesBarras = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: {
-        position: 'bottom',
-        labels: {
-          usePointStyle: true,
-          padding: 15,
-          font: { size: 11 }
-        }
-      },
-      tooltip: {
-        callbacks: {
-          label: (context) => ` ${context.dataset.label}: ${formatoMoneda(context.raw)}`
-        }
-      }
+      legend: { position: 'bottom', labels: { usePointStyle: true, padding: 15, font: { size: 11 } } },
+      tooltip: { callbacks: { label: (context) => ` ${context.dataset.label}: ${formatoMoneda(context.raw)}` } }
     },
     scales: {
-      y: {
-        beginAtZero: true,
-        grid: { color: '#f0f0f0' },
-        ticks: {
-          callback: (value) => `$${value.toLocaleString()}`,
-          font: { size: 10 }
-        }
-      },
-      x: {
-        grid: { display: false },
-        ticks: { font: { size: 10 } }
-      }
+      y: { beginAtZero: true, grid: { color: '#f0f0f0' }, ticks: { callback: (value) => `$${value.toLocaleString()}`, font: { size: 10 } } },
+      x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+    }
+  };
+
+  const opcionesLinea = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { beginAtZero: true, grid: { color: '#f0f0f0' }, ticks: { stepSize: 1, font: { size: 10 } } },
+      x: { grid: { display: false }, ticks: { font: { size: 10 } } }
     }
   };
 
@@ -208,56 +179,73 @@ export const VentasDirectas = () => {
 
   return (
     <div>
-      {/* Cards de Resumen */}
+      {/* ==========================================
+          SELECTOR DE AÑO Y TOTALES ANUALES
+          ========================================== */}
+      <Card className="shadow-sm border-0 mb-4" style={{ borderRadius: '12px' }}>
+        <Card.Body className="p-3">
+          <Row className="align-items-center g-3">
+            <Col md={3}>
+              <Form.Group>
+                <Form.Label className="small fw-semibold text-secondary">Año</Form.Label>
+                <Form.Select value={anio} onChange={(e) => setAnio(parseInt(e.target.value))} className="rounded-3">
+                  {anios.map(a => <option key={a} value={a}>{a}</option>)}
+                </Form.Select>
+              </Form.Group>
+            </Col>
+            <Col md={9}>
+              <div className="d-flex justify-content-end gap-2 flex-wrap">
+                <Badge bg="primary" style={{ fontSize: '0.85rem', padding: '8px 12px' }}>
+                  Ventas: {datos.totalesAnuales.cantidadVentas}
+                </Badge>
+                <Badge bg="success" style={{ fontSize: '0.85rem', padding: '8px 12px' }}>
+                  Facturado: {formatoMoneda(datos.totalesAnuales.totalVentas)}
+                </Badge>
+                <Badge bg="info" text="dark" style={{ fontSize: '0.85rem', padding: '8px 12px' }}>
+                  Cobrado: {formatoMoneda(datos.totalesAnuales.totalCobrado)}
+                </Badge>
+                <Badge bg="warning" text="dark" style={{ fontSize: '0.85rem', padding: '8px 12px' }}>
+                  Descuentos: {formatoMoneda(datos.totalesAnuales.totalDescuentos)}
+                </Badge>
+              </div>
+            </Col>
+          </Row>
+        </Card.Body>
+      </Card>
+
+      {/* ==========================================
+          CARDS DE MÉTRICAS GENERALES
+          ========================================== */}
       <Row className="g-3 mb-4">
         <Col xl={3} lg={6} md={6}>
           <Card className="shadow-sm border-0 h-100" style={{ borderRadius: '12px', borderLeft: '4px solid #3483FA' }}>
             <Card.Body>
-              <div className="d-flex justify-content-between align-items-start">
-                <div>
-                  <small className="text-muted d-block mb-1">TOTAL VENTAS</small>
-                  <h3 className="fw-bold mb-0" style={{ color: '#3483FA' }}>{datos.resumen.totalVentas}</h3>
-                </div>
-                <div className="rounded-circle p-2" style={{ backgroundColor: '#e8f0fe' }}>
-                  <i className="bi bi-cart-check" style={{ color: '#3483FA', fontSize: '1.2rem' }}></i>
-                </div>
-              </div>
+              <small className="text-muted d-block mb-1">TOTAL VENTAS ANUALES</small>
+              <h3 className="fw-bold mb-0" style={{ color: '#3483FA' }}>{datos.totalesAnuales.cantidadVentas}</h3>
+              <small className="text-muted">Contado: {datos.totalesAnuales.contado.cantidad} | Canje: {datos.totalesAnuales.plan_canje.cantidad}</small>
             </Card.Body>
           </Card>
         </Col>
-
+        
         <Col xl={3} lg={6} md={6}>
           <Card className="shadow-sm border-0 h-100" style={{ borderRadius: '12px', borderLeft: '4px solid #00A650' }}>
             <Card.Body>
-              <div className="d-flex justify-content-between align-items-start">
-                <div>
-                  <small className="text-muted d-block mb-1">TOTAL PAGADO</small>
-                  <h3 className="fw-bold mb-2" style={{ color: '#00A650' }}>{formatoMoneda(datos.resumen.totales.montoPagado)}</h3>
-                  
-                  {/* Desglose por método de pago */}
-                  {Object.keys(metodosPagoResumen).length > 0 && (
-                    <div className="mt-2">
-                      {Object.entries(metodosPagoResumen).map(([metodo, monto]) => {
-                        const config = metodosPagoConfig[metodo] || metodosPagoConfig.otro;
-                        return (
-                          <div key={metodo} className="d-flex justify-content-between align-items-center py-1" style={{ borderBottom: '1px solid #f5f5f5' }}>
-                            <small className="text-muted">
-                              <i className={`bi ${config.icon} me-1`} style={{ color: config.color }}></i>
-                              {config.label}:
-                            </small>
-                            <small className="fw-semibold" style={{ color: '#333' }}>
-                              {formatoMoneda(monto)}
-                            </small>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+              <small className="text-muted d-block mb-1">TOTAL COBRADO</small>
+              <h3 className="fw-bold mb-2" style={{ color: '#00A650' }}>{formatoMoneda(datos.totalesAnuales.totalCobrado)}</h3>
+              {/* Desglose por método de pago */}
+              {Object.keys(metodosPagoResumen).length > 0 && (
+                <div className="mt-2">
+                  {Object.entries(metodosPagoResumen).slice(0, 3).map(([metodo, monto]) => {
+                    const config = metodosPagoConfig[metodo] || metodosPagoConfig.otro;
+                    return (
+                      <div key={metodo} className="d-flex justify-content-between align-items-center py-1 border-bottom" style={{ borderColor: '#f5f5f5' }}>
+                        <small className="text-muted"><i className={`bi ${config.icon} me-1`} style={{ color: config.color }}></i>{config.label}:</small>
+                        <small className="fw-semibold" style={{ color: '#333' }}>{formatoMoneda(monto)}</small>
+                      </div>
+                    );
+                  })}
                 </div>
-                <div className="rounded-circle p-2" style={{ backgroundColor: '#e6f4ea' }}>
-                  <i className="bi bi-cash-coin" style={{ color: '#00A650', fontSize: '1.2rem' }}></i>
-                </div>
-              </div>
+              )}
             </Card.Body>
           </Card>
         </Col>
@@ -265,15 +253,8 @@ export const VentasDirectas = () => {
         <Col xl={3} lg={6} md={6}>
           <Card className="shadow-sm border-0 h-100" style={{ borderRadius: '12px', borderLeft: '4px solid #FF7733' }}>
             <Card.Body>
-              <div className="d-flex justify-content-between align-items-start">
-                <div>
-                  <small className="text-muted d-block mb-1">TOTAL DESCUENTOS</small>
-                  <h3 className="fw-bold mb-0" style={{ color: '#FF7733' }}>{formatoMoneda(datos.resumen.totales.descuentos)}</h3>
-                </div>
-                <div className="rounded-circle p-2" style={{ backgroundColor: '#fff3ed' }}>
-                  <i className="bi bi-tag" style={{ color: '#FF7733', fontSize: '1.2rem' }}></i>
-                </div>
-              </div>
+              <small className="text-muted d-block mb-1">TOTAL DESCUENTOS</small>
+              <h3 className="fw-bold mb-0" style={{ color: '#FF7733' }}>{formatoMoneda(datos.totalesAnuales.totalDescuentos)}</h3>
             </Card.Body>
           </Card>
         </Col>
@@ -281,187 +262,173 @@ export const VentasDirectas = () => {
         <Col xl={3} lg={6} md={6}>
           <Card className="shadow-sm border-0 h-100" style={{ borderRadius: '12px', borderLeft: '4px solid #FFC107' }}>
             <Card.Body>
-              <div className="d-flex justify-content-between align-items-start">
-                <div>
-                  <small className="text-muted d-block mb-1">VALOR TASADO CANJES</small>
-                  <h3 className="fw-bold mb-0" style={{ color: '#1a1a1a' }}>{formatoMoneda(datos.resumen.totales.valorTasadoCanjes)}</h3>
-                  <small className="text-muted">{datos.resumen.totales.cantidadCanjeDisponibles || 0} equipos disponibles</small>
-                </div>
-                <div className="rounded-circle p-2" style={{ backgroundColor: '#fffbe6' }}>
-                  <i className="bi bi-arrow-repeat" style={{ color: '#FFC107', fontSize: '1.2rem' }}></i>
-                </div>
-              </div>
+              <small className="text-muted d-block mb-1">VALOR TASADO CANJES</small>
+              <h3 className="fw-bold mb-0" style={{ color: '#1a1a1a' }}>{formatoMoneda(datos.resumen.totales.valorTasadoCanjes)}</h3>
+              <small className="text-muted">{datos.resumen.totales.cantidadCanjeDisponibles || 0} equipos disponibles</small>
             </Card.Body>
           </Card>
         </Col>
       </Row>
 
-      {/* Gráficos */}
+      {/* ==========================================
+          GRÁFICOS
+          ========================================== */}
       <Row className="g-3 mb-4">
-        <Col lg={4} md={12}>
-          <Card className="shadow-sm border-0 h-100" style={{ borderRadius: '12px' }}>
-            <Card.Body>
-              <h6 className="fw-bold mb-3" style={{ color: '#1a1a1a' }}>
-                <i className="bi bi-pie-chart me-2" style={{ color: '#3483FA' }}></i>
-                Distribución de Ventas
-              </h6>
-              <div style={{ height: '250px' }}>
-                <Doughnut data={datosTorta} options={opcionesTorta} />
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-
         <Col lg={8} md={12}>
           <Card className="shadow-sm border-0 h-100" style={{ borderRadius: '12px' }}>
             <Card.Body>
               <h6 className="fw-bold mb-3" style={{ color: '#1a1a1a' }}>
-                <i className="bi bi-bar-chart me-2" style={{ color: '#00A650' }}></i>
-                Montos Pagados vs Descuentos
+                <i className="bi bi-bar-chart me-2" style={{ color: '#3483FA' }}></i>
+                Comparativa Anual (Facturado vs Cobrado)
               </h6>
-              <div style={{ height: '250px' }}>
-                <Bar data={datosBarras} options={opcionesBarras} />
+              <div style={{ height: '300px' }}>
+                <Bar data={datosGraficoBarras} options={opcionesBarras} />
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+        <Col lg={4} md={12}>
+          <Card className="shadow-sm border-0 h-100" style={{ borderRadius: '12px' }}>
+            <Card.Body>
+              <h6 className="fw-bold mb-3" style={{ color: '#1a1a1a' }}>
+                <i className="bi bi-graph-up me-2" style={{ color: '#6F42C1' }}></i>
+                Ventas por Mes
+              </h6>
+              <div style={{ height: '300px' }}>
+                <Line data={datosGraficoLinea} options={opcionesLinea} />
               </div>
             </Card.Body>
           </Card>
         </Col>
       </Row>
 
-      {/* Filtros */}
-      <Card className="shadow-sm border-0 mb-3" style={{ borderRadius: '12px' }}>
-        <Card.Body className="p-3">
-          <Row className="g-3 align-items-end">
-            <Col md={4}>
-              <small className="text-muted d-block mb-1">Filtrar por tipo</small>
-              <div className="d-flex gap-2">
-                <Button 
-                  variant={filtroTipo === 'todas' ? 'primary' : 'outline-primary'} 
-                  size="sm" 
-                  onClick={() => setFiltroTipo('todas')}
-                  className="rounded-3"
-                >
-                  Todas
-                </Button>
-                <Button 
-                  variant={filtroTipo === 'contado' ? 'success' : 'outline-success'} 
-                  size="sm" 
-                  onClick={() => setFiltroTipo('contado')}
-                  className="rounded-3"
-                >
-                  Contado
-                </Button>
-                <Button 
-                  variant={filtroTipo === 'plan_canje' ? 'warning' : 'outline-warning'} 
-                  size="sm" 
-                  onClick={() => setFiltroTipo('plan_canje')}
-                  className="rounded-3"
-                >
-                  Plan Canje
-                </Button>
-              </div>
+      {/* ==========================================
+          GRILLA DE 12 MESES
+          ========================================== */}
+      <Row className="g-3 mb-4">
+        {datos.resumenAnual.map(mes => {
+          const porcentajeCobrado = mes.totalVentas > 0 ? Math.round((mes.totalCobrado / mes.totalVentas) * 100) : 0;
+          
+          return (
+            <Col xl={3} lg={4} md={6} key={mes.mes}>
+              <Card 
+                className="shadow-sm border-0 h-100" 
+                style={{ 
+                  borderRadius: '12px', 
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  borderLeft: `4px solid ${mes.cantidadVentas > 0 ? '#3483FA' : '#E5E5E5'}`
+                }}
+                onClick={() => handleVerMes(mes)}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                <Card.Body className="p-3">
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <h6 className="fw-bold mb-0" style={{ color: '#333' }}>{mes.nombre}</h6>
+                    <Badge bg={mes.cantidadVentas > 0 ? 'primary' : 'secondary'}>{mes.cantidadVentas} ventas</Badge>
+                  </div>
+                  
+                  <div className="mb-2">
+                    <small className="text-muted d-block">Facturado</small>
+                    <strong style={{ color: '#3483FA', fontSize: '0.9rem' }}>{formatoMoneda(mes.totalVentas)}</strong>
+                  </div>
+                  <div className="mb-2">
+                    <small className="text-muted d-block">Cobrado</small>
+                    <strong style={{ color: '#00A650', fontSize: '0.9rem' }}>{formatoMoneda(mes.totalCobrado)}</strong>
+                  </div>
+                  <div className="mb-3">
+                    <small className="text-muted d-block">Descuentos</small>
+                    <strong style={{ color: '#FF7733', fontSize: '0.9rem' }}>{formatoMoneda(mes.totalDescuentos)}</strong>
+                  </div>
+                  
+                  <div className="d-flex gap-1 flex-wrap">
+                    <Badge bg="success" style={{ fontSize: '0.65rem' }}>Contado: {mes.contado.cantidad}</Badge>
+                    <Badge bg="warning" text="dark" style={{ fontSize: '0.65rem' }}>Canje: {mes.plan_canje.cantidad}</Badge>
+                  </div>
+                </Card.Body>
+              </Card>
             </Col>
-            <Col md={4}>
-              <small className="text-muted d-block mb-1">Buscar</small>
-              <input 
-                type="text" 
-                className="form-control rounded-3" 
-                placeholder="Cliente, DNI, producto..." 
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-                style={{ fontSize: '0.9rem' }}
-              />
-            </Col>
-            <Col md={4} className="text-end">
-              <small className="text-muted">{ventasFiltradas.length} ventas</small>
-            </Col>
-          </Row>
-        </Card.Body>
-      </Card>
+          );
+        })}
+      </Row>
 
-      {/* Tabla de Ventas */}
-      <Card className="shadow-sm border-0" style={{ borderRadius: '12px' }}>
-        <Card.Body className="p-0">
-          <div className="table-responsive">
-            <Table hover className="align-middle mb-0" style={{ fontSize: '0.85rem' }}>
-              <thead className="bg-light">
-                <tr>
-                  <th>Fecha</th>
-                  <th>Cliente</th>
-                  <th>Tipo</th>
-                  <th>Producto</th>
-                  <th>Canje Recibido</th>
-                  <th>Monto Total</th>
-                  <th>Pagado</th>
-                  <th>Descuentos</th>
-                  <th>Pendiente</th>
-                  <th>Acción</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ventasFiltradas.map((venta, idx) => (
-                  <tr key={idx}>
-                    <td>{formatoFecha(venta.fechaRealizada)}</td>
-                    <td>
-                      <div style={{ fontWeight: '500', color: '#333' }}>
-                        {venta.cliente?.nombre} {venta.cliente?.apellido}
-                      </div>
-                      <small className="text-muted">DNI: {venta.cliente?.dni}</small>
-                    </td>
-                    <td>
-                      <Badge bg={venta.tipoVenta === 'contado' ? 'success' : 'warning'} text={venta.tipoVenta === 'contado' ? 'white' : 'dark'}>
-                        {venta.tipoVenta === 'contado' ? 'Contado' : 'Plan Canje'}
-                      </Badge>
-                    </td>
-                    <td>
-                      <div style={{ color: '#333' }}>{venta.producto?.nombre}</div>
-                      <small className="text-muted">{venta.producto?.modelo}</small>
-                    </td>
-                    <td>
-                      {venta.tipoVenta === 'plan_canje' && venta.equiposCanje && venta.equiposCanje.length > 0 ? (
-                        venta.equiposCanje.map((equipo, eqIdx) => (
-                          <div key={eqIdx} className="mb-1">
-                            <div style={{ color: '#333', fontSize: '0.8rem' }}>
-                              {equipo.nombre} {equipo.modelo}
-                            </div>
-                            <Badge bg="warning" text="dark" style={{ fontSize: '0.7rem' }}>
-                              Tasado: {formatoMoneda(equipo.valorTasado)}
-                            </Badge>
-                          </div>
-                        ))
-                      ) : '-'}
-                    </td>
-                    <td><strong>{formatoMoneda(venta.montoTotal)}</strong></td>
-                    <td style={{ color: '#00A650' }}>{formatoMoneda(venta.montoPagado)}</td>
-                    <td style={{ color: '#FF7733' }}>{venta.totalDescuentos > 0 ? formatoMoneda(venta.totalDescuentos) : '-'}</td>
-                    <td>
-                      {venta.tipoVenta === 'plan_canje' && venta.montoPendienteReal !== undefined ? (
-                        venta.montoPendienteReal > 0 ? (
-                          <span style={{ color: '#DC3545', fontWeight: '500' }}>
-                            {formatoMoneda(venta.montoPendienteReal)}
-                          </span>
-                        ) : (
-                          <Badge bg="success">Saldado</Badge>
-                        )
-                      ) : (
-                        venta.montoPendiente > 0 ? (
-                          <span style={{ color: '#DC3545' }}>{formatoMoneda(venta.montoPendiente)}</span>
-                        ) : '-'
-                      )}
-                    </td>
-                    <td>
-                      <Button variant="outline-primary" size="sm" onClick={() => handleVerVenta(venta)}>
-                        <i className="bi bi-eye"></i>
-                      </Button>
-                    </td>
+      {/* ==========================================
+          MODAL DETALLE DEL MES
+          ========================================== */}
+      <Modal show={showModalMes} onHide={() => setShowModalMes(false)} size="xl" centered>
+        <Modal.Header closeButton className="border-0 pb-0">
+          <Modal.Title className="fw-bold" style={{ color: '#1a1a1a' }}>
+            <i className="bi bi-calendar-month me-2" style={{ color: '#3483FA' }}></i>
+            {mesSeleccionado?.nombre} - Ventas del Mes
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {ventasDelMes.length > 0 ? (
+            <div className="table-responsive">
+              <Table hover className="align-middle" style={{ fontSize: '0.85rem' }}>
+                <thead className="bg-light">
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Cliente</th>
+                    <th>Tipo</th>
+                    <th>Producto</th>
+                    <th>Monto Total</th>
+                    <th>Pagado</th>
+                    <th>Descuentos</th>
+                    <th>Conducta</th>
+                    <th>Acción</th>
                   </tr>
-                ))}
-              </tbody>
-            </Table>
-          </div>
-        </Card.Body>
-      </Card>
+                </thead>
+                <tbody>
+                  {ventasDelMes.map((venta, idx) => (
+                    <tr key={idx}>
+                      <td>{formatoFecha(venta.fechaRealizada)}</td>
+                      <td>
+                        <div style={{ fontWeight: '500', color: '#333' }}>
+                          {venta.cliente?.nombre} {venta.cliente?.apellido}
+                        </div>
+                        <small className="text-muted">DNI: {venta.cliente?.dni}</small>
+                      </td>
+                      <td>
+                        <Badge bg={venta.tipoVenta === 'contado' ? 'success' : 'warning'} text={venta.tipoVenta === 'contado' ? 'white' : 'dark'}>
+                          {venta.tipoVenta === 'contado' ? 'Contado' : 'Plan Canje'}
+                        </Badge>
+                      </td>
+                      <td>
+                        <div style={{ color: '#333' }}>{venta.producto?.nombre}</div>
+                        <small className="text-muted">{venta.producto?.modelo}</small>
+                      </td>
+                      <td><strong>{formatoMoneda(venta.montoTotal)}</strong></td>
+                      <td style={{ color: '#00A650' }}>{formatoMoneda(venta.montoPagado)}</td>
+                      <td style={{ color: '#FF7733' }}>{venta.totalDescuentos > 0 ? formatoMoneda(venta.totalDescuentos) : '-'}</td>
+                      <td>
+                        <Badge bg={
+                          venta.conducta_pago === 'al dia' || venta.conducta_pago === 'cancelado' ? 'success' :
+                          venta.conducta_pago === 'atrasado' ? 'danger' : 'secondary'
+                        }>
+                          {venta.conducta_pago}
+                        </Badge>
+                      </td>
+                      <td>
+                        <Button variant="outline-primary" size="sm" onClick={() => handleVerVenta(venta)}>
+                          <i className="bi bi-eye"></i>
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            </div>
+          ) : (
+            <p className="text-muted text-center py-4">No hay ventas registradas en este mes</p>
+          )}
+        </Modal.Body>
+      </Modal>
 
-      {/* Modal Detalle de Venta */}
+      {/* ==========================================
+          MODAL DETALLE DE VENTA (Reutilizado)
+          ========================================== */}
       <Modal show={showModalVenta} onHide={() => setShowModalVenta(false)} size="lg" centered>
         <Modal.Header closeButton className="border-0 pb-0">
           <Modal.Title className="fw-bold" style={{ color: '#1a1a1a' }}>
@@ -513,6 +480,7 @@ export const VentasDirectas = () => {
                         <small className="text-muted d-block">Equipo</small>
                         <strong style={{ color: '#333' }}>{equipo.nombre} {equipo.modelo}</strong>
                         {equipo.capacidad && <div><small className="text-muted">Capacidad: {equipo.capacidad}</small></div>}
+                        {equipo.imei && <div><small className="text-muted">IMEI: {equipo.imei}</small></div>}   {/* 👈 NUEVO */}
                       </Col>
                       <Col md={3}>
                         <small className="text-muted d-block">Estado</small>

@@ -59,7 +59,7 @@ export const Ceo = () => {
         return <VentasContado />;
 
       default:
-        return <DashboardCeo usuario={usuario} />;
+        return  <ReportesNuevo />;
     }
   };
 

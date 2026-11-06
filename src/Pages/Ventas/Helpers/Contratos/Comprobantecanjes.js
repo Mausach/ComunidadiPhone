@@ -617,8 +617,7 @@ export const generarComprobantePlanCanje = (venta, firmaDataURL) => {
   yActual += 4;
 
   dibujarTildeVerde(MARGIN_LEFT + 3, yActual + 3, 2.8);
-  doc.text("Acepto la validez de la firma digital conforme Ley N° 25.506.", MARGIN_LEFT + 8, yActual + 3);
-  yActual += 8;
+  doc.text("Acepto la validez de la firma digital o electrónica conforme Ley N° 25.506.", MARGIN_LEFT + 8, yActual + 3);
 
   // ============================================================
   // FIRMA DEL CLIENTE (centrada - formato Certificado)
@@ -690,8 +689,7 @@ export const generarComprobantePlanCanje = (venta, firmaDataURL) => {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7.5);
   doc.setTextColor(azul);
-  doc.text("FIRMA AUTORIZADA Ley N° 25.506 — Firma Digital", PAGE_WIDTH / 2, yActual, { align: "center" });
-
+  doc.text("FIRMA AUTORIZADA Ley N° 25.506 — Firma Electrónica", PAGE_WIDTH / 2, yActual, { align: "center" });
   // ============================================================
   // PIE DE TODAS LAS PÁGINAS
   // ============================================================

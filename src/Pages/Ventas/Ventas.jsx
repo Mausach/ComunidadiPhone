@@ -1,4 +1,4 @@
-// Ventas/index.jsx
+// src/Pages/Ventas/index.jsx
 import React, { useState } from 'react';
 import { Container, Row, Col, Card, Button, Badge } from 'react-bootstrap';
 import { useLocation, Navigate } from 'react-router-dom';
@@ -9,15 +9,8 @@ import { crearCliente } from './Helpers/AltaCliente';
 import { FormularioVenta } from './Componentes/FormularioVenta';
 import { crearVenta } from './Helpers/AltaVenta';
 
-import { ModalFirmaContrato } from './Componentes/ModalFirma';
-import { generarContratoVentaDirecta } from './Helpers/Contratos/ContraroDirecta';
-import { generarReciboPago } from './Helpers/Comprovanteventa/Reciboventa';
-import { generarCertificadoGarantia } from './Helpers/Garantia/Certificadogarantiaventa';
-import { generarContratoCredito } from './Helpers/Contratos/Contratocreditopersonal';
-import { generarSolicitudAdhesion } from './Helpers/Formadecion/certificadoadhecion';
-import { generarComprobantePlanCanje } from './Helpers/Contratos/Comprobantecanjes';
-import { generarReciboCredito } from './Helpers/Comprovanteventa/Recivocredito';
-
+// 👈 IMPORTAMOS EL NUEVO MODAL (Asegurate de que la ruta sea correcta según tu estructura)
+import { ModalGenerarDocumentos } from '../Ceo/Componentes/ModalGenerarDocumentos'; 
 
 export const Ventas = ({ mostrarNavbar = true }) => {
   const location = useLocation();
@@ -32,8 +25,8 @@ export const Ventas = ({ mostrarNavbar = true }) => {
   const [ventaCreada, setVentaCreada] = useState(null);
   const [alert, setAlert] = useState({ show: false, message: '', variant: 'danger' });
 
-  const [showFirma, setShowFirma] = useState(false);
-  const [firmasGuardadas, setFirmasGuardadas] = useState(null);
+  // 👈 NUEVO ESTADO PARA EL MODAL
+  const [showModalGenerar, setShowModalGenerar] = useState(false);
 
   if (!usuario || !usuario.rol) {
     return <Navigate to="/" replace />;
@@ -69,15 +62,12 @@ export const Ventas = ({ mostrarNavbar = true }) => {
   };
 
   const handleVentaSubmit = async (ventaData) => {
-    console.log('📦 Datos de venta recibidos:', ventaData);
     setIsLoading(true);
     try {
       const result = await crearVenta(ventaData);
 
-      // 👉 PARCHE: Mezclar equipoCanje del payload con la venta del backend
       const ventaCompleta = {
         ...result.data,
-        // Preservar equipoCanje del formulario (para generar documentos)
         equipoCanje: ventaData.equipoCanje?.nombre ? ventaData.equipoCanje : null
       };
 
@@ -100,84 +90,12 @@ export const Ventas = ({ mostrarNavbar = true }) => {
     setClienteData(null);
     setClienteId(null);
     setVentaCreada(null);
-    setFirmasGuardadas(null);
     setAlert({ show: false, message: '', variant: 'danger' });
-  };
-
-  const handleFirmarDocumentos = (firmas) => {
-    setFirmasGuardadas(firmas);
-    setShowFirma(false);
-    showAlert('Firmas guardadas correctamente. Ya podés generar los documentos.', 'success');
-  };
-
-  const handleVolverAFirmar = () => {
-    setFirmasGuardadas(null);
-    setShowFirma(true);
-  };
-
-  // ==========================================
-  // GENERADORES DE DOCUMENTOS
-  // ==========================================
-
-  // ✅ CONTRATO - Solo para VENTA CONTADO (por ahora)
-  const handleGenerarContrato = () => {
-    if (!ventaCreada || !firmasGuardadas) return;
-
-    if (ventaCreada.tipoVenta === 'contado') {
-      generarContratoVentaDirecta(ventaCreada, firmasGuardadas.cliente);
-    } else if (ventaCreada.tipoVenta === 'sistema1' || ventaCreada.tipoVenta === 'sistema2') {
-      // Sistema 1 requiere firma del garante, sistema 2 no
-      const firmaGarante = ventaCreada.tipoVenta === 'sistema1' ? firmasGuardadas.garante : null;
-      generarContratoCredito(ventaCreada, firmasGuardadas.cliente, firmaGarante);
-    } else {
-      showAlert('Contrato no disponible para este tipo de venta', 'warning');
-    }
-  };
-
-  // ✅ RECIBO - Contado y Crédito (por ahora solo contado)
-  const handleGenerarRecibo = () => {
-    if (!ventaCreada || !firmasGuardadas) return;
-
-    if (ventaCreada.tipoVenta === 'contado') {
-      generarReciboPago(ventaCreada, firmasGuardadas.cliente);
-    } else if (ventaCreada.tipoVenta === 'sistema1' || ventaCreada.tipoVenta === 'sistema2') {
-      generarReciboCredito(ventaCreada, firmasGuardadas.cliente);
-    } else {
-      showAlert('Recibo no disponible para este tipo de venta', 'warning');
-    }
-  };
-
-  // ✅ CERTIFICADO GARANTÍA - Aplica a TODOS los tipos (contado, canje, sistema)
-  const handleGenerarGarantia = () => {
-    if (!ventaCreada || !firmasGuardadas) return;
-    generarCertificadoGarantia(ventaCreada, firmasGuardadas.cliente);
-  };
-
-  // ⏳ SOLICITUD DE ADHESIÓN - Plan Canje y Sistemas
-  const handleGenerarAdhesion = () => {
-    if (!ventaCreada || !firmasGuardadas) return;
-
-    if (ventaCreada.tipoVenta === 'plan_canje' || ventaCreada.tipoVenta === 'sistema1' || ventaCreada.tipoVenta === 'sistema2') {
-      const firmaGarante = ventaCreada.tipoVenta === 'sistema1' ? firmasGuardadas.garante : null;
-      generarSolicitudAdhesion(ventaCreada, firmasGuardadas.cliente, firmaGarante);
-    } else {
-      showAlert('Solicitud de Adhesión no aplica para venta de contado', 'warning');
-    }
-  };
-
-  // ⏳ COMPROBANTE PLAN CANJE - Solo Plan Canje
-  const handleGenerarComprobanteCanje = () => {
-    if (!ventaCreada || !firmasGuardadas) return;
-
-    if (ventaCreada.tipoVenta === 'plan_canje') {
-      generarComprobantePlanCanje(ventaCreada, firmasGuardadas.cliente);
-    }
   };
 
   // ==========================================
   // HELPERS
   // ==========================================
-
   const formatMonto = (monto) => !monto ? '$0' : `$${monto.toLocaleString('es-AR')}`;
   const formatFecha = (fecha) => !fecha ? '-' : new Date(fecha).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
@@ -192,118 +110,8 @@ export const Ventas = ({ mostrarNavbar = true }) => {
   const tieneGarante = ventaCreada?.requiereGarante || ventaCreada?.garante?.nombre;
 
   // ==========================================
-  // DOCUMENTOS SEGÚN TIPO DE VENTA
-  // ==========================================
-  const obtenerDocumentosDisponibles = () => {
-    if (!ventaCreada) return [];
-
-    const tipo = ventaCreada.tipoVenta;
-
-    // 🔵 VENTA CONTADO (DIRECTA)
-    if (tipo === 'contado') {
-      return [
-        {
-          key: 'contrato',
-          label: 'Contrato de Compraventa',
-          icon: 'bi-file-earmark-text',
-          handler: handleGenerarContrato,
-          variant: 'primary',
-          descripcion: 'Contrato de compraventa de teléfono celular'
-        },
-        {
-          key: 'recibo',
-          label: 'Recibo Oficial de Pago',
-          icon: 'bi-receipt',
-          handler: handleGenerarRecibo,
-          variant: 'outline-primary',
-          descripcion: 'Comprobante de pago de la operación'
-        },
-        {
-          key: 'garantia',
-          label: 'Certificado de Garantía',
-          icon: 'bi-shield-check',
-          handler: handleGenerarGarantia,
-          variant: 'outline-primary',
-          descripcion: 'Certificado de garantía del equipo'
-        }
-      ];
-    }
-
-    // 🟡 PLAN CANJE
-    if (tipo === 'plan_canje') {
-      return [
-        {
-          key: 'adhesion',
-          label: 'Solicitud de Adhesión',
-          icon: 'bi-file-text',
-          handler: handleGenerarAdhesion,
-          variant: 'primary',
-          descripcion: 'Solicitud de adhesión al sistema'
-        },
-        {
-          key: 'garantia',
-          label: 'Certificado de Garantía',
-          icon: 'bi-shield-check',
-          handler: handleGenerarGarantia,
-          variant: 'outline-primary',
-          descripcion: 'Certificado de garantía del equipo'
-        },
-        {
-          key: 'comprobante-canje',
-          label: 'Comprobante de Plan Canje',
-          icon: 'bi-arrow-repeat',
-          handler: handleGenerarComprobanteCanje,
-          variant: 'outline-primary',
-          descripcion: 'Comprobante del equipo recibido en canje'
-        }
-      ];
-    }
-
-    // 🟢 SISTEMA 1 Y SISTEMA 2 (CRÉDITO PERSONAL)
-    if (tipo === 'sistema1' || tipo === 'sistema2') {
-      return [
-        {
-          key: 'contrato-credito',
-          label: 'Contrato de Crédito Personal',
-          icon: 'bi-file-earmark-text',
-          handler: handleGenerarContrato,
-          variant: 'primary',
-          descripcion: 'Contrato de crédito personal'
-        },
-        {
-          key: 'recibo-credito',
-          label: 'Recibo de Crédito Personal',
-          icon: 'bi-receipt',
-          handler: handleGenerarRecibo,
-          variant: 'outline-primary',
-          descripcion: 'Recibo oficial del crédito otorgado'
-        },
-        {
-          key: 'adhesion',
-          label: 'Solicitud de Adhesión',
-          icon: 'bi-file-text',
-          handler: handleGenerarAdhesion,
-          variant: 'outline-primary',
-          descripcion: 'Solicitud de adhesión al sistema'
-        },
-        {
-          key: 'garantia',
-          label: 'Certificado de Garantía',
-          icon: 'bi-shield-check',
-          handler: handleGenerarGarantia,
-          variant: 'outline-primary',
-          descripcion: 'Certificado de garantía del equipo'
-        }
-      ];
-    }
-
-    return [];
-  };
-
-  // ==========================================
   // RENDERIZADO
   // ==========================================
-
   const renderVista = () => {
     switch (vistaActiva) {
       case 'dashboard':
@@ -368,41 +176,18 @@ export const Ventas = ({ mostrarNavbar = true }) => {
                         </Row>
                       </div>
 
-                      {/* 🆕 Sección de documentos dinámica según tipo de venta */}
-                      {!firmasGuardadas ? (
-                        <Button onClick={() => setShowFirma(true)} className="rounded-3 px-4"
-                          variant="success" style={{ fontWeight: '500', minWidth: '250px' }}>
-                          <i className="bi bi-pen me-2"></i>Firmar Documentos
+                      {/* 👉 ÚNICO BOTÓN PARA ABRIR EL MODAL DE GENERACIÓN */}
+                      <div className="d-flex flex-column gap-2 align-items-center mb-4">
+                        <Button 
+                          onClick={() => setShowModalGenerar(true)} 
+                          className="rounded-3 px-4"
+                          variant="success" 
+                          style={{ fontWeight: '500', minWidth: '280px' }}
+                        >
+                          <i className="bi bi-file-earmark-arrow-down me-2"></i>
+                          Generar Documentación
                         </Button>
-                      ) : (
-                        <div className="mb-4">
-                          <Badge bg="success" className="mb-3 p-2">
-                            <i className="bi bi-check-circle me-1"></i>Firmas guardadas correctamente
-                          </Badge>
-                          <p className="text-muted small mb-3">
-                            Documentos disponibles para <strong>{ventaCreada.tipoVenta}</strong>:
-                          </p>
-                          <div className="d-flex flex-column gap-2 align-items-center">
-                            {obtenerDocumentosDisponibles().map(doc => (
-                              <Button
-                                key={doc.key}
-                                onClick={doc.handler}
-                                className="rounded-3 px-4"
-                                variant={doc.variant}
-                                style={{ fontWeight: '500', minWidth: '280px' }}
-                                title={doc.descripcion}
-                              >
-                                <i className={`bi ${doc.icon} me-2`}></i>
-                                {doc.label}
-                              </Button>
-                            ))}
-                            <Button onClick={handleVolverAFirmar} className="rounded-3 px-4"
-                              variant="outline-secondary" style={{ fontWeight: '500', minWidth: '280px' }}>
-                              <i className="bi bi-arrow-repeat me-2"></i>Volver a Firmar
-                            </Button>
-                          </div>
-                        </div>
-                      )}
+                      </div>
 
                       <div className="mt-3">
                         <Button onClick={handleNuevaVenta} className="rounded-3 px-4"
@@ -429,12 +214,15 @@ export const Ventas = ({ mostrarNavbar = true }) => {
       {mostrarNavbar && <NavBarVentas usuario={usuario} vistaActiva={vistaActiva} onCambiarVista={setVistaActiva} />}
       <div>{renderVista()}</div>
 
-      <ModalFirmaContrato
-        show={showFirma}
-        onHide={() => setShowFirma(false)}
-        venta={ventaCreada}
-        onConfirmar={handleFirmarDocumentos}
-      />
+      {/* 👉 MODAL DE GENERACIÓN DE DOCUMENTOS */}
+      {ventaCreada && (
+        <ModalGenerarDocumentos
+          show={showModalGenerar}
+          onHide={() => setShowModalGenerar(false)}
+          venta={ventaCreada}
+          usuario={usuario}
+        />
+      )}
     </div>
   );
 };

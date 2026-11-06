@@ -2,13 +2,7 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import logo from "../../../../assets/logocenter.png";
 
-
-// ============================================================
-// GENERADOR DE SOLICITUD DE ADHESIÓN
-// ============================================================
-
-
-export const generarSolicitudAdhesion = (venta, firmaClienteDataURL, firmaGaranteDataURL = null) => {
+export const generarSolicitudFinanciacion = (datos, firmaClienteDataURL, firmaGaranteDataURL = null) => {
   const doc = new jsPDF({
     orientation: "portrait",
     unit: "mm",
@@ -18,14 +12,11 @@ export const generarSolicitudAdhesion = (venta, firmaClienteDataURL, firmaGarant
   // ============================================================
   // CONFIGURACIÓN
   // ============================================================
-
   const PAGE_WIDTH = 210;
   const MARGIN_LEFT = 15;
   const MARGIN_RIGHT = 15;
   const CONTENT_WIDTH = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT;
-  const FIRST_PAGE_TOP = 58;
-  const NORMAL_PAGE_TOP = 20;
-  const FOOTER_Y = 286;
+  let yActual = 20;
 
   const azulOscuro = "#021C5E";
   const azul = "#3483FA";
@@ -33,863 +24,301 @@ export const generarSolicitudAdhesion = (venta, firmaClienteDataURL, firmaGarant
   const gris = "#777777";
   const grisClaro = "#AAAAAA";
   const grisFondo = "#F5F7FB";
-  const verdeCheck = "#00A650";
-
-  let yActual = FIRST_PAGE_TOP;
-
-  // ============================================================
-  // DIBUJAR TILDE VERDE
-  // ============================================================
-
-  const dibujarTildeVerde = (x, yTilde, tamano = 3) => {
-    doc.setDrawColor(verdeCheck);
-    doc.setLineWidth(0.5);
-
-    doc.line(
-      x,
-      yTilde - tamano * 0.3,
-      x + tamano * 0.35,
-      yTilde - tamano * 0.05
-    );
-
-    doc.line(
-      x + tamano * 0.35,
-      yTilde - tamano * 0.05,
-      x + tamano * 0.9,
-      yTilde - tamano * 0.9
-    );
-  };
-
-  // ============================================================
-  // DATOS DINÁMICOS
-  // ============================================================
-
-  const cliente = venta?.cliente || {};
-  const producto = venta?.producto || {};
-  const garante = venta?.garante || {};
-  const cuotas = venta?.cuotas || [];
-  const pagos = venta?.pagos || [];
-  const equipoCanje = venta?.equipoCanje || {};
-
-  const nombreCliente = `${cliente.nombre || ""} ${cliente.apellido || ""}`.trim() || "-";
-  const nombreGarante = `${garante.nombre || ""} ${garante.apellido || ""}`.trim() || "-";
-  const dni = cliente.dni || "-";
-  const esSistema1 = venta?.tipoVenta === "sistema1";
-  const esSistema2 = venta?.tipoVenta === "sistema2";
-  const esPlanCanje = venta?.tipoVenta === "plan_canje";
-
-  // Cálculos
-  const montoTotal = venta?.montoTotal || 0;
-  const sena = venta?.montoPagado || 0;
-
-  const saldoAFinanciar = cuotas
-    .filter(c => c.estado_cuota === 'pendiente' || c.estado_cuota === 'pago parcial' || c.estado_cuota === 'no pagada')
-    .reduce((sum, c) => sum + (c.montoCuota - (c.montoPagado || 0)), 0);
-
-  const valorCuota = cuotas.length > 0 ? cuotas[0].montoCuota : 0;
-
-  const frecuenciaMap = {
-    mensual: "Mensual",
-    quincenal: "Quincenal",
-    semanal: "Semanal",
-    diario: "Diario",
-  };
-  const frecuenciaTexto = frecuenciaMap[venta?.frecuenciaCuota] || "-";
-
-  const formasPago = [...new Set(pagos.map(p => p.metodo))];
-
-  // Separar montos por moneda (para plan canje)
-  let diferenciaARS = 0;
-  let diferenciaUSD = 0;
-
-  pagos.forEach(p => {
-    if (p.metodo === "dolares" || p.metodo === "dólares" || p.metodo === "usd") {
-      diferenciaUSD += p.monto;
-    } else {
-      diferenciaARS += p.monto;
-    }
-  });
-
-  const formatoMoneda = (v) => v ? `$${Number(v).toLocaleString("es-AR")}` : "$0";
-
-  const formatoFecha = (fecha) => {
-    if (!fecha) return "-";
-    const fechaObj = new Date(fecha);
-    if (Number.isNaN(fechaObj.getTime())) return "-";
-    return fechaObj.toLocaleDateString("es-AR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  };
 
   // ============================================================
   // FUNCIONES AUXILIARES
   // ============================================================
-
-  const dibujarEncabezado = () => {
-    try {
-      doc.addImage(logo, "PNG", 1, 10, 60, 35);
-    } catch (error) {
-      console.warn("No se pudo cargar el logo:", error);
-    }
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(18);
-    doc.setTextColor(azulOscuro);
-    doc.text("Comunidad iPhone", 55, 22);
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(gris);
-    doc.text("Patagonia N° 695 - Santiago del Estero (CP 4200)", 55, 30);
-    doc.text("Tel: 385 317-6107 · comunidadahorrosgo@gmail.com", 55, 36);
-
-    doc.setDrawColor(azul);
-    doc.setLineWidth(0.5);
-    doc.line(MARGIN_LEFT, 52, PAGE_WIDTH - MARGIN_RIGHT, 52);
-  };
-
-  const dibujarPiePagina = (numeroPagina, totalPaginas) => {
-    doc.setDrawColor("#DDDDDD");
-    doc.setLineWidth(0.3);
-    doc.line(MARGIN_LEFT, 279, PAGE_WIDTH - MARGIN_RIGHT, 279);
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(6.5);
-    doc.setTextColor(grisClaro);
-
-    doc.text(
-      "COMUNIDAD IPHONE | Solicitud de Adhesión | Santiago del Estero",
-      MARGIN_LEFT,
-      FOOTER_Y
-    );
-
-    doc.text(
-      `Página ${numeroPagina} de ${totalPaginas}`,
-      PAGE_WIDTH - MARGIN_RIGHT,
-      FOOTER_Y,
-      { align: "right" }
-    );
-  };
-
-  const nuevaPagina = () => {
-    doc.addPage();
-    yActual = NORMAL_PAGE_TOP;
-  };
-
   const comprobarEspacio = (alturaNecesaria = 10) => {
-    const limiteInferior = 273;
-    if (yActual + alturaNecesaria > limiteInferior) {
-      nuevaPagina();
+    if (yActual + alturaNecesaria > 273) {
+      doc.addPage();
+      yActual = 20;
       return true;
     }
     return false;
   };
 
-  const agregarTexto = (texto, opciones = {}) => {
-    const {
-      fontSize = 8.5,
-      color = negro,
-      fontStyle = "normal",
-      lineHeight = 3.8,
-      spacingAfter = 4,
-      align = "left",
-      x = MARGIN_LEFT,
-      width = CONTENT_WIDTH,
-    } = opciones;
-
-    doc.setFont("helvetica", fontStyle);
-    doc.setFontSize(fontSize);
-    doc.setTextColor(color);
-
-    const lineas = doc.splitTextToSize(texto, width);
-    const alturaTexto = lineas.length * lineHeight;
-
-    comprobarEspacio(alturaTexto + spacingAfter);
-
-    doc.text(lineas, x, yActual, { align, maxWidth: width });
-    yActual += alturaTexto + spacingAfter;
-  };
-
-  const agregarTituloSeccion = (numero, titulo) => {
-    comprobarEspacio(12);
-    doc.setFillColor(azulOscuro);
-    doc.roundedRect(MARGIN_LEFT, yActual - 3, CONTENT_WIDTH, 7, 1.5, 1.5, "F");
-
+  const agregarTituloSeccion = (letra, titulo) => {
+    comprobarEspacio(15);
+    yActual += 5;
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
-    doc.setTextColor("#FFFFFF");
-    doc.text(`${numero}. ${titulo}`, MARGIN_LEFT + 3, yActual + 2);
-
-    yActual += 9;
+    doc.setFontSize(10);
+    doc.setTextColor(azulOscuro);
+    doc.text(`${letra}. ${titulo}`, MARGIN_LEFT, yActual);
+    yActual += 4;
+    doc.setDrawColor(azulOscuro);
+    doc.setLineWidth(0.3);
+    doc.line(MARGIN_LEFT, yActual, PAGE_WIDTH - MARGIN_RIGHT, yActual);
+    yActual += 4;
   };
 
+  const formatoMoneda = (v) => v ? `$${Number(v).toLocaleString("es-AR")}` : "$0";
+  const check = (val) => val && val !== "-" ? val : "___________";
+
   // ============================================================
-  // ENCABEZADO Y TÍTULO
+  // ENCABEZADO (Logo centrado, título, subtítulo)
   // ============================================================
+  try {
+    // Logo centrado (ancho 40, alto 20)
+    doc.addImage(logo, "PNG", (PAGE_WIDTH - 40) / 2, 10, 40, 20);
+  } catch (error) {
+    console.warn("No se pudo cargar el logo:", error);
+  }
 
-  dibujarEncabezado();
-  yActual = FIRST_PAGE_TOP;
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(15);
-  doc.setTextColor(azulOscuro);
-  doc.text("SOLICITUD DE ADHESIÓN", PAGE_WIDTH / 2, yActual, { align: "center" });
-
-  yActual += 6;
+  yActual = 35;
 
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
+  doc.setFontSize(7);
   doc.setTextColor(gris);
-  doc.text("Crédito Personal", PAGE_WIDTH / 2, yActual, { align: "center" });
-
-  yActual += 8;
-
-  // ============================================================
-  // DECLARACIÓN INICIAL
-  // ============================================================
-
-  agregarTexto(
-    "El/la solicitante declara haber sido debidamente informado/a sobre las condiciones de la presente solicitud, las cuales conoce, comprende y acepta en su totalidad.",
-    {
-      fontSize: 8.5,
-      color: negro,
-      fontStyle: "italic",
-      lineHeight: 3.8,
-      spacingAfter: 6,
-      align: "left",
-      x: MARGIN_LEFT,
-      width: CONTENT_WIDTH,
-    }
-  );
-
-  yActual += 2;
-
-  // ============================================================
-  // 1. DATOS DEL SOLICITANTE
-  // ============================================================
-
-  agregarTituloSeccion("1", "DATOS DEL SOLICITANTE");
-
-  autoTable(doc, {
-    startY: yActual,
-    body: [
-      ["Apellido y Nombre completo", nombreCliente, "DNI", dni],
-      ["CUIT / CUIL", cliente.cuil || "-", "Fecha de nacimiento", cliente.fechaNacimiento || "-"],
-      ["E-mail", cliente.email || "-", "Celular principal", cliente.telefono || "-"],
-      ["Celular alternativo", cliente.telefono2 || "-", "Código Postal", cliente.codigoPostal || "-"],
-      ["Calle", cliente.direccion || "-", "Localidad", venta?.localidad || "-"],
-      ["Provincia", "Santiago del Estero", "Estado civil", cliente.estadoCivil || "-"],
-      ["Ocupación / Profesión", cliente.ocupacion || "-", "", ""],
-    ],
-    margin: { left: MARGIN_LEFT, right: MARGIN_RIGHT },
-    styles: {
-      font: "helvetica",
-      fontSize: 8,
-      cellPadding: 2,
-      textColor: negro,
-      lineColor: "#DDDDDD",
-      lineWidth: 0.2,
-      valign: "middle",
-    },
-    columnStyles: {
-      0: { fontStyle: "bold", cellWidth: 42, fillColor: grisFondo, fontSize: 7.5 },
-      1: { cellWidth: 50 },
-      2: { fontStyle: "bold", cellWidth: 42, fillColor: grisFondo, fontSize: 7.5 },
-      3: { cellWidth: 46 },
-    },
-  });
-
-  yActual = doc.lastAutoTable.finalY + 6;
-
-  // ============================================================
-  // 2. DATOS DEL EQUIPO ADQUIRIDO
-  // ============================================================
-
-  agregarTituloSeccion("2", "DATOS DEL EQUIPO ADQUIRIDO");
-
-  autoTable(doc, {
-    startY: yActual,
-    body: [
-      ["Modelo", producto.modelo || "-", "Capacidad (GB)", producto.capacidad || "-"],
-      ["Color", producto.color || "-", "Condición batería", producto.bateria || "-"],
-      ["IMEI", producto.imei || "-", "Condición del equipo", producto.estado || "-"],
-    ],
-    margin: { left: MARGIN_LEFT, right: MARGIN_RIGHT },
-    styles: {
-      font: "helvetica",
-      fontSize: 8,
-      cellPadding: 2,
-      textColor: negro,
-      lineColor: "#DDDDDD",
-      lineWidth: 0.2,
-    },
-    columnStyles: {
-      0: { fontStyle: "bold", cellWidth: 42, fillColor: grisFondo, fontSize: 7.5 },
-      1: { cellWidth: 50 },
-      2: { fontStyle: "bold", cellWidth: 42, fillColor: grisFondo, fontSize: 7.5 },
-      3: { cellWidth: 46 },
-    },
-  });
-
-  yActual = doc.lastAutoTable.finalY + 4;
-
-  // ============================================================
-  // MODALIDAD (con tildes verdes)
-  // ============================================================
-
-  const esSellado = producto.estado === "sellado";
-
+  doc.text("COMUNIDAD IPHONE · Patagonia 695 · Santiago del Estero · 385 417-8021", PAGE_WIDTH / 2, yActual, { align: "center" });
+  
+  yActual += 6;
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(8);
-  doc.setTextColor(negro);
-  doc.text("Modalidad:", MARGIN_LEFT, yActual + 3);
+  doc.setFontSize(16);
+  doc.setTextColor(azulOscuro);
+  doc.text("SOLICITUD DE FINANCIACIÓN", PAGE_WIDTH / 2, yActual, { align: "center" });
 
-  let modalidadX = MARGIN_LEFT + 25;
-  const modalidadY = yActual + 3;
-
-  // Sellado
-  if (esSellado) {
-    dibujarTildeVerde(modalidadX, modalidadY, 2.5);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(verdeCheck);
-  } else {
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(negro);
-  }
-  doc.text("Sellado", modalidadX + 4, modalidadY);
-  modalidadX += 22;
-
-  // Usado
-  if (!esSellado) {
-    dibujarTildeVerde(modalidadX, modalidadY, 2.5);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(verdeCheck);
-  } else {
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(negro);
-  }
-  doc.text("Usado", modalidadX + 4, modalidadY);
-  modalidadX += 22;
-
-  // Crédito
-  if (esSistema1 || esSistema2) {
-    dibujarTildeVerde(modalidadX, modalidadY, 2.5);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(verdeCheck);
-  } else {
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(negro);
-  }
-  doc.text("Crédito", modalidadX + 4, modalidadY);
-  modalidadX += 22;
-
-  // Canje
-  if (esPlanCanje) {
-    dibujarTildeVerde(modalidadX, modalidadY, 2.5);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(verdeCheck);
-  } else {
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(negro);
-  }
-  doc.text("Canje", modalidadX + 4, modalidadY);
+  yActual += 5;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  doc.setTextColor(gris);
+  doc.text(`Crédito personal · Sistema 1 · Solicitud N° ${datos.contrato.numeroContrato}`, PAGE_WIDTH / 2, yActual, { align: "center" });
 
   yActual += 10;
 
   // ============================================================
-  // 3. DETALLE DE LA OPERACIÓN (SEGÚN TIPO DE VENTA)
+  // TABLA DATOS DE LA SOLICITUD (Fecha, sucursal, asesor)
   // ============================================================
-
-  agregarTituloSeccion("3", "DETALLE DE LA OPERACIÓN");
-
-  if (esSistema1 || esSistema2) {
-    // ---------- CRÉDITO PERSONAL ----------
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(8.5);
-    doc.setTextColor(azulOscuro);
-    doc.text("Crédito Personal", MARGIN_LEFT, yActual + 3);
-    yActual += 6;
-
-    autoTable(doc, {
-      startY: yActual,
-      body: [
-        ["Monto total ($)", formatoMoneda(montoTotal), "Seña / Anticipo ($)", formatoMoneda(sena)],
-        ["Saldo a financiar ($)", formatoMoneda(saldoAFinanciar), "Valor de cada cuota ($)", formatoMoneda(valorCuota)],
-      ],
-      margin: { left: MARGIN_LEFT, right: MARGIN_RIGHT },
-      styles: {
-        font: "helvetica",
-        fontSize: 8,
-        cellPadding: 2,
-        textColor: negro,
-        lineColor: "#DDDDDD",
-        lineWidth: 0.2,
-      },
-      columnStyles: {
-        0: { fontStyle: "bold", cellWidth: 42, fillColor: grisFondo, fontSize: 7.5 },
-        1: { cellWidth: 50 },
-        2: { fontStyle: "bold", cellWidth: 42, fillColor: grisFondo, fontSize: 7.5 },
-        3: { cellWidth: 46 },
-      },
-    });
-
-    yActual = doc.lastAutoTable.finalY + 3;
-
-    // ---- FRECUENCIA DE PAGO ----
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(8);
-    doc.setTextColor(negro);
-    doc.text("Frecuencia de pago:", MARGIN_LEFT, yActual + 3);
-
-    let freqX = MARGIN_LEFT + 35;
-    const freqY = yActual + 3;
-
-    const frecuencias = [
-      { key: "mensual", label: "Mensual" },
-      { key: "quincenal", label: "Quincenal" },
-      { key: "semanal", label: "Semanal" },
-    ];
-
-    frecuencias.forEach(fr => {
-      const marcado = venta?.frecuenciaCuota === fr.key;
-      if (marcado) {
-        dibujarTildeVerde(freqX, freqY, 2.5);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(verdeCheck);
-      } else {
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(negro);
-      }
-      doc.text(fr.label, freqX + 4, freqY);
-      freqX += 25;
-    });
-
-    yActual += 7;
-
-    // ---- FORMA DE PAGO ----
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(negro);
-    doc.text("Forma de pago:", MARGIN_LEFT, yActual + 3);
-
-    let formaX = MARGIN_LEFT + 28;
-    const formaY = yActual + 3;
-
-    const formas = [
-      { keys: ["efectivo"], label: "Efectivo" },
-      { keys: ["transferencia"], label: "Transferencia" },
-      { keys: ["tarjeta_credito", "tarjeta_debito"], label: "Tarjeta" },
-    ];
-
-    const tieneOtro = !formasPago.some(fp =>
-      ["efectivo", "transferencia", "tarjeta_credito", "tarjeta_debito"].includes(fp)
-    );
-
-    formas.forEach(fm => {
-      const marcado = fm.keys.some(k => formasPago.includes(k));
-      if (marcado) {
-        dibujarTildeVerde(formaX, formaY, 2.5);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(verdeCheck);
-      } else {
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(negro);
-      }
-      doc.text(fm.label, formaX + 4, formaY);
-      formaX += 30;
-    });
-
-    if (tieneOtro) {
-      dibujarTildeVerde(formaX, formaY, 2.5);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(verdeCheck);
-    } else {
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(negro);
-    }
-    doc.text("Otro", formaX + 4, formaY);
-
-    yActual += 10;
-
-  } else if (esPlanCanje) {
-    // ---------- PLAN CANJE ----------
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(8.5);
-    doc.setTextColor(azulOscuro);
-    doc.text("Plan Canje", MARGIN_LEFT, yActual + 3);
-    yActual += 6;
-
-    autoTable(doc, {
-      startY: yActual,
-      body: [
-        ["Monto total del equipo nuevo ($)", formatoMoneda(montoTotal), "", ""],
-        ["Diferencia abonada en pesos ($)", formatoMoneda(diferenciaARS), "Diferencia abonada en dólares (USD)", diferenciaUSD > 0 ? `USD ${diferenciaUSD.toLocaleString("es-AR")}` : ""],
-      ],
-      margin: { left: MARGIN_LEFT, right: MARGIN_RIGHT },
-      styles: {
-        font: "helvetica",
-        fontSize: 8,
-        cellPadding: 2,
-        textColor: negro,
-        lineColor: "#DDDDDD",
-        lineWidth: 0.2,
-      },
-      columnStyles: {
-        0: { fontStyle: "bold", cellWidth: 42, fillColor: grisFondo, fontSize: 7.5 },
-        1: { cellWidth: 50 },
-        2: { fontStyle: "bold", cellWidth: 42, fillColor: grisFondo, fontSize: 7.5 },
-        3: { cellWidth: 46 },
-      },
-    });
-
-    yActual = doc.lastAutoTable.finalY + 3;
-
-    // ---- FORMA DE PAGO DE LA DIFERENCIA ----
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(8);
-    doc.setTextColor(negro);
-    doc.text("Forma de pago de la diferencia:", MARGIN_LEFT, yActual + 3);
-
-    let formaX = MARGIN_LEFT + 55;
-    const formaY = yActual + 3;
-
-    const formas = [
-      { keys: ["efectivo"], label: "Efectivo" },
-      { keys: ["transferencia"], label: "Transferencia" },
-      { keys: ["tarjeta_credito", "tarjeta_debito"], label: "Tarjeta" },
-    ];
-
-    const tieneOtro = !formasPago.some(fp =>
-      ["efectivo", "transferencia", "tarjeta_credito", "tarjeta_debito"].includes(fp)
-    );
-
-    formas.forEach(fm => {
-      const marcado = fm.keys.some(k => formasPago.includes(k));
-      if (marcado) {
-        dibujarTildeVerde(formaX, formaY, 2.5);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(verdeCheck);
-      } else {
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(negro);
-      }
-      doc.text(fm.label, formaX + 4, formaY);
-      formaX += 30;
-    });
-
-    if (tieneOtro) {
-      dibujarTildeVerde(formaX, formaY, 2.5);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(verdeCheck);
-    } else {
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(negro);
-    }
-    doc.text("Otro", formaX + 4, formaY);
-
-    yActual += 10;
-  }
-
-  // ============================================================
-  // TABLA DE FECHAS DE VENCIMIENTO (solo crédito personal)
-  // ============================================================
-
-  if (cuotas.length > 0 && (esSistema1 || esSistema2)) {
-    comprobarEspacio(35);
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(8.5);
-    doc.setTextColor(azulOscuro);
-    doc.text(`Fechas de Vencimiento — Plan ${cuotas.length} Cuotas`, MARGIN_LEFT, yActual + 3);
-    yActual += 7;
-
-    const headerCuotas = cuotas.map((_, i) => `Cuota ${i + 1}`);
-    const bodyCuotas = cuotas.map(c => formatoFecha(c.fechaCobro));
-
-    autoTable(doc, {
-      startY: yActual,
-      head: [headerCuotas],
-      body: [bodyCuotas],
-      margin: { left: MARGIN_LEFT, right: MARGIN_RIGHT },
-      styles: {
-        font: "helvetica",
-        fontSize: 7,
-        cellPadding: 2,
-        textColor: negro,
-        lineColor: "#DDDDDD",
-        lineWidth: 0.2,
-        halign: "center",
-        valign: "middle",
-      },
-      headStyles: {
-        fillColor: azulOscuro,
-        textColor: "#FFFFFF",
-        fontStyle: "bold",
-        fontSize: 7,
-        halign: "center",
-      },
-    });
-
-    yActual = doc.lastAutoTable.finalY + 5;
-
-    // ============================================================
-    // BONIFICACIÓN (solo sistema1, NO sistema2)
-    // ============================================================
-
-    if (esSistema1) {
-      comprobarEspacio(12);
-
-      doc.setFillColor("#FFF8E1");
-      doc.roundedRect(MARGIN_LEFT, yActual, CONTENT_WIDTH, 9, 1.5, 1.5, "F");
-
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(7.5);
-      doc.setTextColor("#856404");
-      doc.text(
-        "BONIFICACIÓN: PAGÁ AL DÍA Y TE AHORRÁS LA ÚLTIMA CUOTA",
-        PAGE_WIDTH / 2,
-        yActual + 5.5,
-        { align: "center" }
-      );
-
-      yActual += 13;
-    }
-  }
-
-  // ============================================================
-  // PLAN CANJE — EQUIPO ENTREGADO (solo si es plan canje)
-  // ============================================================
-
-  if (esPlanCanje) {
-    comprobarEspacio(35);
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(8.5);
-    doc.setTextColor(azulOscuro);
-    doc.text("Plan Canje — Equipo Entregado", MARGIN_LEFT, yActual + 3);
-    yActual += 7;
-
-    autoTable(doc, {
-      startY: yActual,
-      head: [["Modelo", "Color", "Capacidad (GB)", "Condición batería", "IMEI"]],
-      body: [[
-        equipoCanje?.modelo || "___________",
-        equipoCanje?.color || "___________",
-        equipoCanje?.capacidad || "___________",
-        equipoCanje?.bateria || "___________",
-        equipoCanje?.imei || "___________",
-      ]],
-      margin: { left: MARGIN_LEFT, right: MARGIN_RIGHT },
-      styles: {
-        font: "helvetica",
-        fontSize: 7.5,
-        cellPadding: 3,
-        textColor: negro,
-        lineColor: "#DDDDDD",
-        lineWidth: 0.2,
-        halign: "center",
-      },
-      headStyles: {
-        fillColor: grisFondo,
-        textColor: azulOscuro,
-        fontStyle: "bold",
-        fontSize: 7.5,
-        halign: "center",
-      },
-    });
-
-    yActual = doc.lastAutoTable.finalY + 4;
-
-    autoTable(doc, {
-      startY: yActual,
-      body: [
-        ["Correo del equipo entregado", equipoCanje?.correo || "___________", "Contraseña", equipoCanje?.contrasena || "___________"],
-      ],
-      margin: { left: MARGIN_LEFT, right: MARGIN_RIGHT },
-      styles: {
-        font: "helvetica",
-        fontSize: 7.5,
-        cellPadding: 2,
-        textColor: negro,
-        lineColor: "#DDDDDD",
-        lineWidth: 0.2,
-      },
-      columnStyles: {
-        0: { fontStyle: "bold", cellWidth: 42, fillColor: grisFondo, fontSize: 7 },
-        1: { cellWidth: 50 },
-        2: { fontStyle: "bold", cellWidth: 42, fillColor: grisFondo, fontSize: 7 },
-        3: { cellWidth: 46 },
-      },
-    });
-
-    yActual = doc.lastAutoTable.finalY + 6;
-  }
-
-  // ============================================================
-  // 4. DATOS DEL GARANTE
-  // ============================================================
-
-  agregarTituloSeccion("4", "DATOS DEL GARANTE");
-
   autoTable(doc, {
     startY: yActual,
     body: [
-      ["Apellido y Nombre completo", nombreGarante || "___________", "DNI", garante?.dni || "___________"],
-      ["CUIT / CUIL", garante?.cuil || "___________", "Teléfono", garante?.telefono || "___________"],
-      ["Relación con el solicitante", garante?.relacion || "___________", "Ocupación / Profesión", garante?.ocupacion || "___________"],
-      ["Domicilio del Garante", garante?.direccion || "___________", "", ""],
+      ["Fecha y sucursal", `${datos.contrato.fechaSolicitud} · ${datos.contrato.sucursal}`],
+      ["Asesor comercial", datos.contrato.asesorNombre],
     ],
     margin: { left: MARGIN_LEFT, right: MARGIN_RIGHT },
-    styles: {
-      font: "helvetica",
-      fontSize: 8,
-      cellPadding: 2,
-      textColor: negro,
-      lineColor: "#DDDDDD",
-      lineWidth: 0.2,
-    },
-    columnStyles: {
-      0: { fontStyle: "bold", cellWidth: 42, fillColor: grisFondo, fontSize: 7.5 },
-      1: { cellWidth: 50 },
-      2: { fontStyle: "bold", cellWidth: 42, fillColor: grisFondo, fontSize: 7.5 },
-      3: { cellWidth: 46 },
-    },
+    theme: 'grid',
+    styles: { font: "helvetica", fontSize: 8, cellPadding: 2, textColor: negro, lineColor: "#E5E5E5", lineWidth: 0.2 },
+    columnStyles: { 0: { fontStyle: "bold", cellWidth: 45, fillColor: grisFondo } },
   });
+  yActual = doc.lastAutoTable.finalY + 3;
 
-  yActual = doc.lastAutoTable.finalY + 8;
-
-  // ============================================================
-  // PROTECCIÓN DE DATOS PERSONALES
-  // ============================================================
-
-  comprobarEspacio(30);
-
-  doc.setFillColor(grisFondo);
-  doc.roundedRect(MARGIN_LEFT, yActual - 2, CONTENT_WIDTH, 18, 2, 2, "F");
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(8);
-  doc.setTextColor(azulOscuro);
-  doc.text("PROTECCIÓN DE DATOS PERSONALES — Ley N° 25.326", MARGIN_LEFT + 3, yActual + 3);
-
+  // Texto legal
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
-  doc.setTextColor(negro);
-
-  const textoProteccion = "El/la solicitante autoriza el tratamiento de sus datos personales para evaluación crediticia, gestión administrativa y verificación en bases de datos públicas o privadas, aceptando que su comportamiento de pago podrá ser informado ante incumplimiento.";
-  const lineasProteccion = doc.splitTextToSize(textoProteccion, CONTENT_WIDTH - 6);
-  doc.text(lineasProteccion, MARGIN_LEFT + 3, yActual + 8);
-
-  yActual += 21;
-
-  // Checkbox de términos con tilde verde
-  dibujarTildeVerde(MARGIN_LEFT + 3, yActual, 3);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(8.5);
-  doc.setTextColor(verdeCheck);
-  doc.text("He leído, comprendo y acepto los términos y condiciones del servicio.", MARGIN_LEFT + 8, yActual);
-
-  yActual += 15;
+  doc.setTextColor(gris);
+  const textoLegal = "Esta solicitud sirve para evaluar la financiación. No obliga a COMUNIDAD IPHONE a otorgarla ni al solicitante a contratarla. Si se aprueba, la operación se formaliza en el contrato de compraventa en cuotas.";
+  const lineasLegal = doc.splitTextToSize(textoLegal, CONTENT_WIDTH);
+  doc.text(lineasLegal, MARGIN_LEFT, yActual);
+  yActual += lineasLegal.length * 3.5 + 5;
 
   // ============================================================
-  // FIRMAS (cliente + garante lado a lado)
+  // A. DATOS DEL SOLICITANTE
   // ============================================================
+  agregarTituloSeccion("A", "DATOS DEL SOLICITANTE");
+  autoTable(doc, {
+    startY: yActual,
+    body: [
+      ["Nombre y apellido", check(datos.cliente.nombre)],
+      ["DNI / CUIL", `${check(datos.cliente.dni)} / ${check(datos.cliente.cuil)}`],
+      ["Fecha de nacimiento / estado civil", `${check(datos.cliente.nacimiento)} / ${check(datos.cliente.estadoCivil)}`],
+      ["Domicilio real", `${check(datos.cliente.domicilio)}, barrio ${check(datos.cliente.barrio)}, ${check(datos.cliente.localidad)}`],
+      ["Referencias para llegar", check(datos.cliente.referenciasDomicilio)],
+      ["Celular principal / alternativo", `${check(datos.cliente.celular)} / ${check(datos.cliente.celularAlt)}`],
+      ["Correo electrónico", check(datos.cliente.email)],
+      ["Ocupación y empleador", `${check(datos.cliente.ocupacion)} · ${check(datos.cliente.empleador)}`],
+      ["Antigüedad / ingreso mensual neto", `${check(datos.cliente.antiguedad)} / ${formatoMoneda(datos.cliente.ingreso)}`],
+      ["Cómo cobra sus ingresos", check(datos.cliente.medioCobro)],
+    ],
+    margin: { left: MARGIN_LEFT, right: MARGIN_RIGHT },
+    theme: 'grid',
+    styles: { font: "helvetica", fontSize: 8, cellPadding: 2, textColor: negro, lineColor: "#E5E5E5", lineWidth: 0.2 },
+    columnStyles: { 0: { fontStyle: "bold", cellWidth: 55, fillColor: grisFondo } },
+  });
+  yActual = doc.lastAutoTable.finalY + 5;
 
-  comprobarEspacio(70);
-
-  const colIzqX = MARGIN_LEFT;
-  const colDerX = PAGE_WIDTH / 2 + 5;
-  const anchoCol = PAGE_WIDTH / 2 - MARGIN_LEFT - 5;
-
-  const firmaYInicio = yActual;
-
-  // ---------- FIRMA DEL SOLICITANTE (izquierda) ----------
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
-  doc.setTextColor(azulOscuro);
-  doc.text("FIRMA DEL SOLICITANTE", colIzqX + anchoCol / 2, firmaYInicio, { align: "center" });
-
-  if (firmaClienteDataURL) {
-    try {
-      doc.addImage(
-        firmaClienteDataURL,
-        "PNG",
-        colIzqX + 5,
-        firmaYInicio + 5,
-        anchoCol - 10,
-        30
-      );
-    } catch (error) {
-      console.warn("No se pudo insertar la firma del cliente:", error);
-    }
+  // ============================================================
+  // B. DATOS DEL GARANTE (Si aplica)
+  // ============================================================
+  if (datos.contrato.tieneGarante) {
+    agregarTituloSeccion("B", "DATOS DEL GARANTE");
+    autoTable(doc, {
+      startY: yActual,
+      body: [
+        ["Nombre y apellido", check(datos.garante.nombre)],
+        ["DNI / CUIL", `${check(datos.garante.dni)} / ${check(datos.garante.cuil)}`],
+        ["Fecha de nacimiento / estado civil", `${check(datos.garante.nacimiento)} / ${check(datos.garante.estadoCivil)}`],
+        ["Domicilio real", `${check(datos.garante.domicilio)}, barrio ${check(datos.garante.barrio)}, ${check(datos.garante.localidad)}`],
+        ["Referencias para llegar", check(datos.garante.referenciasDomicilio)],
+        ["Celular principal / alternativo", `${check(datos.garante.celular)} / ${check(datos.garante.celularAlt)}`],
+        ["Correo electrónico", check(datos.garante.email)],
+        ["Ocupación y empleador", `${check(datos.garante.ocupacion)} · ${check(datos.garante.empleador)}`],
+        ["Antigüedad / ingreso mensual neto", `${check(datos.garante.antiguedad)} / ${formatoMoneda(datos.garante.ingreso)}`],
+        ["Cómo cobra sus ingresos", check(datos.garante.medioCobro)],
+        ["Vínculo con el solicitante", check(datos.garante.vinculo)],
+      ],
+      margin: { left: MARGIN_LEFT, right: MARGIN_RIGHT },
+      theme: 'grid',
+      styles: { font: "helvetica", fontSize: 8, cellPadding: 2, textColor: negro, lineColor: "#E5E5E5", lineWidth: 0.2 },
+      columnStyles: { 0: { fontStyle: "bold", cellWidth: 55, fillColor: grisFondo } },
+    });
+    yActual = doc.lastAutoTable.finalY + 5;
   }
 
-  const lineFirmaY = firmaYInicio + 38;
-  doc.setDrawColor("#999999");
-  doc.setLineWidth(0.3);
-  doc.line(colIzqX + 5, lineFirmaY, colIzqX + anchoCol - 5, lineFirmaY);
+  // ============================================================
+  // NUEVA PÁGINA PARA SECCIONES RESTANTES
+  // ============================================================
+  doc.addPage();
+  yActual = 20;
 
+  // ============================================================
+  // C. REFERENCIAS PERSONALES DEL SOLICITANTE
+  // ============================================================
+  agregarTituloSeccion("C", "REFERENCIAS PERSONALES DEL SOLICITANTE");
+  autoTable(doc, {
+    startY: yActual,
+    head: [['Nombre y apellido', 'Vínculo', 'Teléfono', 'Domicilio']],
+    body: datos.referencias.map(ref => [check(ref.nombre), check(ref.vinculo), check(ref.telefono), check(ref.domicilio)]),
+    margin: { left: MARGIN_LEFT, right: MARGIN_RIGHT },
+    theme: 'grid',
+    styles: { font: "helvetica", fontSize: 8, cellPadding: 2, textColor: negro, lineColor: "#E5E5E5", lineWidth: 0.2 },
+    headStyles: { fillColor: azulOscuro, textColor: "#FFFFFF", fontStyle: "bold" },
+  });
+  yActual = doc.lastAutoTable.finalY + 5;
+
+  // ============================================================
+  // D. OPERACIÓN SOLICITADA
+  // ============================================================
+  agregarTituloSeccion("D", "OPERACIÓN SOLICITADA");
+  autoTable(doc, {
+    startY: yActual,
+    body: [
+      ["Equipo", `iPhone ${check(datos.operacion.equipoModelo)} · ${check(datos.operacion.equipoCapacidad)} · ${check(datos.operacion.equipoColor)} · ${check(datos.operacion.equipoEstado)}`],
+      ["Precio de contado", formatoMoneda(datos.operacion.precioContado)],
+      ["Anticipo propuesto", `${formatoMoneda(datos.operacion.anticipoTotal)} ${datos.operacion.anticipoDetalle}`],
+      ["Equipo en canje", datos.contrato.tieneCanje ? `iPhone ${check(datos.canje.modelo)} · valor estimado ${formatoMoneda(datos.canje.valor)}` : "No"],
+      ["Saldo a financiar", formatoMoneda(datos.operacion.saldoFinanciado)],
+      ["Plan", `${datos.operacion.cantidadCuotas} cuotas mensuales de ${formatoMoneda(datos.operacion.valorCuota)}, pagaderas del 1 al ${datos.operacion.diaLimitePago} de cada mes`],
+    ],
+    margin: { left: MARGIN_LEFT, right: MARGIN_RIGHT },
+    theme: 'grid',
+    styles: { font: "helvetica", fontSize: 8, cellPadding: 2, textColor: negro, lineColor: "#E5E5E5", lineWidth: 0.2 },
+    columnStyles: { 0: { fontStyle: "bold", cellWidth: 55, fillColor: grisFondo } },
+  });
+  yActual = doc.lastAutoTable.finalY + 5;
+
+  // ============================================================
+  // E. DOCUMENTACIÓN PRESENTADA
+  // ============================================================
+  agregarTituloSeccion("E", "DOCUMENTACIÓN PRESENTADA");
+  autoTable(doc, {
+    startY: yActual,
+    head: [['Documento', 'Solicitante', 'Garante']],
+    body: [
+      ['DNI, frente y dorso (original a la vista)', check(datos.documentacion.doc_dni_cliente), check(datos.documentacion.doc_dni_garante)],
+      ['Fotografía de validación con el DNI en mano', check(datos.documentacion.doc_selfie_cliente), check(datos.documentacion.doc_selfie_garante)],
+      ['Boleta de servicio (luz) del domicilio declarado', check(datos.documentacion.doc_servicio_cliente), check(datos.documentacion.doc_servicio_garante)],
+      ['Comprobante de ingresos (recibo de sueldo o constancia de monotributo)', check(datos.documentacion.doc_ingresos_cliente), check(datos.documentacion.doc_ingresos_garante)],
+      ['Foto del frente del domicilio (opcional)', check(datos.documentacion.doc_frente_cliente), check(datos.documentacion.doc_frente_garante)],
+    ],
+    margin: { left: MARGIN_LEFT, right: MARGIN_RIGHT },
+    theme: 'grid',
+    styles: { font: "helvetica", fontSize: 8, cellPadding: 2, textColor: negro, lineColor: "#E5E5E5", lineWidth: 0.2 },
+    headStyles: { fillColor: azulOscuro, textColor: "#FFFFFF", fontStyle: "bold" },
+  });
+  yActual = doc.lastAutoTable.finalY + 5;
+
+  // ============================================================
+  // F. DECLARACIONES Y AUTORIZACIONES
+  // ============================================================
+  agregarTituloSeccion("F", "DECLARACIONES Y AUTORIZACIONES");
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   doc.setTextColor(negro);
-  doc.text(`Aclaración: ${nombreCliente}`, colIzqX, lineFirmaY + 5);
-  doc.text(`DNI N°: ${dni}`, colIzqX, lineFirmaY + 10);
+  const textoDeclaraciones = "F.1. Declaración jurada. El solicitante y el garante declaran bajo juramento que los datos y la documentación presentados son verdaderos y completos, y que conocen que su falsedad autoriza a rechazar la solicitud o, si el crédito ya se hubiera otorgado, a dar por caducos los plazos.\n\nF.2. Informes crediticios. El solicitante y el garante autorizan a COMUNIDAD IPHONE, nombre comercial de Franco Carlos Lautaro Gómez Cano, a consultar sus antecedentes en Veraz (Equifax), Nosis, la Central de Deudores del BCRA y bases similares, para evaluar esta solicitud.\n\nF.3. Datos personales. El solicitante y el garante prestan su consentimiento para que sus datos se traten con la finalidad de evaluar esta solicitud y, si se aprueba, de administrar el contrato, conforme la Ley N° 25.326. Si la solicitud se rechaza, los datos se conservan solo el tiempo necesario para atender consultas y luego se eliminan.";
+  const lineasDecl = doc.splitTextToSize(textoDeclaraciones, CONTENT_WIDTH);
+  doc.text(lineasDecl, MARGIN_LEFT, yActual);
+  yActual += lineasDecl.length * 3.5 + 5;
 
-  // ---------- FIRMA DEL GARANTE (derecha) ----------
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
-  doc.setTextColor(azulOscuro);
-  doc.text("FIRMA DEL GARANTE", colDerX + anchoCol / 2, firmaYInicio, { align: "center" });
+  // ============================================================
+  // NUEVA PÁGINA PARA FIRMAS Y EVALUACIÓN
+  // ============================================================
+  doc.addPage();
+  yActual = 20;
 
-  if (firmaGaranteDataURL) {
-    try {
-      doc.addImage(
-        firmaGaranteDataURL,
-        "PNG",
-        colDerX + 5,
-        firmaYInicio + 5,
-        anchoCol - 10,
-        30
-      );
-    } catch (error) {
-      console.warn("No se pudo insertar la firma del garante:", error);
-    }
-  }
-
-  doc.setDrawColor("#999999");
-  doc.setLineWidth(0.3);
-  doc.line(colDerX + 5, lineFirmaY, colDerX + anchoCol - 5, lineFirmaY);
-
+  // ============================================================
+  // FIRMAS
+  // ============================================================
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
-  doc.setTextColor(negro);
-  doc.text(`Aclaración: ${nombreGarante || "___________"}`, colDerX, lineFirmaY + 5);
-  doc.text(`DNI N°: ${garante?.dni || "___________"}`, colDerX, lineFirmaY + 10);
+  doc.text("4. Resultado. COMUNIDAD IPHONE evalúa la solicitud conforme su política de crédito y comunica el resultado por WhatsApp al celular declarado.", MARGIN_LEFT, yActual);
+  yActual += 8;
+
+  const dibujarFirma = (titulo, nombre, dni, firmaDataURL, x, y) => {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(azulOscuro);
+    doc.text(titulo, x + 35, y);
+    
+    if (firmaDataURL) {
+      try { doc.addImage(firmaDataURL, "PNG", x + 10, y + 3, 50, 20); } catch (e) {}
+    }
+    
+    doc.setDrawColor("#999999");
+    doc.setLineWidth(0.3);
+    doc.line(x + 10, y + 25, x + 60, y + 25);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(negro);
+    doc.text(`Firmado electrónicamente por ${nombre}, DNI N° ${dni}`, x + 10, y + 29);
+    doc.text(`Fecha y hora: ${datos.contrato.fechaSolicitud}`, x + 10, y + 33);
+    doc.text(`Ley N° 25.506, art. 5`, x + 10, y + 37);
+  };
+
+  // Firma Solicitante (Izquierda)
+  dibujarFirma("EL SOLICITANTE", datos.cliente.nombre, datos.cliente.dni, firmaClienteDataURL, MARGIN_LEFT, yActual);
+
+  // Firma Garante (Derecha)
+  if (datos.contrato.tieneGarante) {
+    dibujarFirma("EL GARANTE", datos.garante.nombre, datos.garante.dni, firmaGaranteDataURL, PAGE_WIDTH / 2 + 5, yActual);
+  }
+
+  yActual += 50;
 
   // ============================================================
-  // (Sin bloque de empresa - los solicitantes son quienes firman)
+  // G. EVALUACIÓN CREDITICIA (USO INTERNO)
   // ============================================================
+  agregarTituloSeccion("G", "EVALUACIÓN CREDITICIA (uso interno)");
+  autoTable(doc, {
+    startY: yActual,
+    body: [
+      ["Veraz del solicitante", `${datos.evaluacion.verazClienteResultado} - consultado el ${datos.evaluacion.verazClienteFecha}`],
+      ["Veraz del garante", `${datos.evaluacion.verazGaranteResultado} - consultado el ${datos.evaluacion.verazGaranteFecha}`],
+      ["Cuota sobre ingreso del solicitante", `${datos.evaluacion.relacionCuotaIngresoCliente} %`],
+      ["Cuota sobre ingreso del garante", `${datos.evaluacion.relacionCuotaIngresoGarante} %`],
+      ["Juicios o embargos registrados", datos.evaluacion.juiciosEmbargos],
+      ["Resultado", datos.evaluacion.resultado],
+      ["Condiciones o motivo", datos.evaluacion.condiciones],
+      ["Evaluó / fecha", `${datos.evaluacion.analistaNombre} - ${datos.evaluacion.fechaEvaluacion}`],
+    ],
+    margin: { left: MARGIN_LEFT, right: MARGIN_RIGHT },
+    theme: 'grid',
+    styles: { font: "helvetica", fontSize: 8, cellPadding: 2, textColor: negro, lineColor: "#E5E5E5", lineWidth: 0.2 },
+    columnStyles: { 0: { fontStyle: "bold", cellWidth: 60, fillColor: grisFondo } },
+  });
 
   // ============================================================
-  // PIE DE TODAS LAS PÁGINAS
+  // PIE DE PÁGINA Y GUARDADO
   // ============================================================
-
   const totalPaginas = doc.getNumberOfPages();
-
-  for (let pagina = 1; pagina <= totalPaginas; pagina++) {
-    doc.setPage(pagina);
-    dibujarPiePagina(pagina, totalPaginas);
+  for (let i = 1; i <= totalPaginas; i++) {
+    doc.setPage(i);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(grisClaro);
+    doc.text(`COMUNIDAD IPHONE - Solicitud de financiación N° ${datos.contrato.numeroContrato}`, MARGIN_LEFT, 286);
+    doc.text(`Página ${i} de ${totalPaginas}`, PAGE_WIDTH - MARGIN_RIGHT, 286, { align: "right" });
   }
 
-  // ============================================================
-  // GUARDAR PDF
-  // ============================================================
-
-  const apellidoArchivo = cliente.apellido || cliente.nombre || "cliente";
-  const dniArchivo = cliente.dni || "";
-
-  const nombreArchivo = `solicitud-adhesion-${apellidoArchivo}-${dniArchivo}.pdf`;
-
+  const nombreArchivo = `solicitud-financiacion-${datos.cliente.nombre.replace(/\s+/g, '-')}-${datos.cliente.dni}.pdf`;
   doc.save(nombreArchivo);
 };

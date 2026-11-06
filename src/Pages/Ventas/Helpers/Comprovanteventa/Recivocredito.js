@@ -741,7 +741,7 @@ export const generarReciboCredito = (venta) => {
 
   comprobarEspacio(30);
 
-  agregarTituloSeccion("6", "FIRMA DIGITAL");
+  agregarTituloSeccion("6", "FIRMA ELECTRONICA");
 
   agregarTexto(
     "Las partes acuerdan que el presente recibo podrá ser suscripto mediante firma digital y/o electrónica, conforme a la Ley N° 25.506, reconociendo plena validez jurídica a dicha modalidad. El cliente acepta que dicha firma producirá los mismos efectos que la firma ológrafa, obligando plenamente desde su aceptación, renunciando a desconocer su validez por el solo hecho de haberse instrumentado en formato digital. El documento digital tendrá carácter de original y plena eficacia probatoria.",
@@ -784,7 +784,7 @@ export const generarReciboCredito = (venta) => {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7.5);
   doc.setTextColor(azul);
-  doc.text("FIRMA AUTORIZADA Ley N° 25.506 — Firma Digital", PAGE_WIDTH / 2, yActual, { align: "center" });
+  doc.text("FIRMA AUTORIZADA Ley N° 25.506 — Firma Electronica", PAGE_WIDTH / 2, yActual, { align: "center" });
 
   // ============================================================
   // PIE DE TODAS LAS PÁGINAS

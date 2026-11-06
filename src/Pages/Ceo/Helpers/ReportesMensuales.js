@@ -135,9 +135,12 @@ export const obtenerVentasFinanciadas = async (anio) => {
 };
 
 // En reportesApi.js
-export const obtenerVentasDirectasCanje = async () => {
+// En reportesApi.js
+export const obtenerVentasDirectasCanje = async (anio) => {
   try {
-    const resp = await authApi.get('/rep_ceo/ventas-directas-canje');
+    const resp = await authApi.get('/rep_ceo/ventas-directas-canje', {
+      params: { anio }
+    });
     return resp.data;
   } catch (error) {
     console.error('Error al obtener ventas directas:', error);
@@ -191,13 +194,14 @@ export const registrarGasto = async (data) => {
  * Obtiene el panel de ventas para el CEO con filtros y paginación
  * @param {Object} filtros - { tipoVenta, localidad, conducta, busqueda, pagina, limite }
  */
+
 export const obtenerRepVentas = async (filtros = {}) => {
   try {
     const params = new URLSearchParams();
-
     if (filtros.tipoVenta) params.append('tipoVenta', filtros.tipoVenta);
     if (filtros.localidad) params.append('localidad', filtros.localidad);
     if (filtros.conducta) params.append('conducta', filtros.conducta);
+    if (filtros.dni) params.append('dni', filtros.dni); // 👈 NUEVO
     if (filtros.busqueda) params.append('busqueda', filtros.busqueda);
     if (filtros.pagina) params.append('pagina', filtros.pagina);
     if (filtros.limite) params.append('limite', filtros.limite);

@@ -441,7 +441,7 @@ export const generarCertificadoGarantia = (venta) => {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7.5);
   doc.setTextColor(azul);
-  doc.text("FIRMA AUTORIZADA Ley N° 25.506 — Firma Digital", PAGE_WIDTH / 2, yActual, { align: "center" });
+  doc.text("FIRMA AUTORIZADA Ley N° 25.506 — Firma Electronica", PAGE_WIDTH / 2, yActual, { align: "center" });
 
   // ============================================================
   // PIE DE TODAS LAS PÁGINAS

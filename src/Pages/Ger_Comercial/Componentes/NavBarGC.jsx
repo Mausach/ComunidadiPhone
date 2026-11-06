@@ -10,12 +10,12 @@ export const NavBarGC = ({ usuario, vistaActiva, onCambiarVista }) => {
   const navigate = useNavigate();
 
   const opciones = [
-    { label: 'Dashboard', icon: 'bi-speedometer2', vista: 'dashboard' },
+    
     { label: 'Reportes', icon: 'bi-graph-up-arrow', vista: 'reportes' },
     { label: 'Ventas', icon: 'bi-cart-plus', vista: 'ventas' },
     { label: 'Cobranza', icon: 'bi-cash-stack', vista: 'cobranza' },
     { label: 'Stock', icon: 'bi-box-seam', vista: 'stock' },
-    { label: 'Historial', icon: 'bi-clock-history', vista: 'historial-cuotas' },
+    
   ];
 
   const handleLogout = () => {

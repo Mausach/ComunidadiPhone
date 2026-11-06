@@ -5,7 +5,7 @@ import { generarReciboPago } from './Comprovanteventa/Reciboventa';
 import { generarCertificadoGarantia } from './Garantia/Certificadogarantiaventa';
 import { generarContratoCredito } from './Contratos/Contratocreditopersonal';
 import { generarReciboCredito } from './Comprovanteventa/Recivocredito';
-import { generarSolicitudAdhesion } from './Formadecion/certificadoadhecion';
+//import { generarSolicitudAdhesion } from './Formadecion/certificadoadhecion';
 import { generarComprobantePlanCanje } from './Contratos/Comprobantecanjes';
 
 // ============================================================

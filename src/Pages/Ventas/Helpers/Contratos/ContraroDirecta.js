@@ -366,14 +366,18 @@ export const generarContratoVentaDirecta = (venta, firmaDataURL) => {
   // OCTAVA — FIRMA DIGITAL
   // ============================================================
 
-  agregarTituloClausula("OCTAVA — FIRMA DIGITAL");
+  // ============================================================
+  // OCTAVA — FIRMA ELECTRÓNICA
+  // ============================================================
+
+  agregarTituloClausula("OCTAVA — FIRMA ELECTRÓNICA");
 
   agregarParrafo(
-    "Las partes acuerdan que el presente contrato podrá ser suscripto mediante firma digital y/o electrónica, conforme a la Ley N° 25.506, reconociendo plena validez jurídica a dicha modalidad. Asimismo, manifiestan que dicha firma producirá los mismos efectos que la firma ológrafa, obligándose plenamente desde su aceptación, renunciando a desconocer su validez por el solo hecho de haberse instrumentado en formato digital."
+    "Las partes acuerdan que el presente contrato podrá ser suscripto mediante firma electrónica, conforme a la Ley N° 25.506, reconociendo plena validez jurídica a dicha modalidad. Asimismo, manifiestan que dicha firma producirá los mismos efectos que la firma ológrafa, obligándose plenamente desde su aceptación, renunciando a desconocer su validez por el solo hecho de haberse instrumentado en formato electrónico."
   );
 
   agregarParrafo(
-    "El documento digital tendrá carácter de original y plena eficacia probatoria."
+    "El documento electrónico tendrá carácter de original y plena eficacia probatoria."
   );
 
   // ============================================================
@@ -434,7 +438,7 @@ export const generarContratoVentaDirecta = (venta, firmaDataURL) => {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7.5);
   doc.setTextColor(azul);
-  doc.text("FIRMA AUTORIZADA Ley N° 25.506 — Firma Digital", PAGE_WIDTH / 2, yActual, { align: "center" });
+  doc.text("FIRMA AUTORIZADA Ley N° 25.506 — Firma Electrónica", PAGE_WIDTH / 2, yActual, { align: "center" });
 
   // ============================================================
   // PIE DE TODAS LAS PÁGINAS

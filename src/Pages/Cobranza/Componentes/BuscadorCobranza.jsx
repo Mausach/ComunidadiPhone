@@ -79,6 +79,50 @@ export const BuscadorCobranza = ({ onBuscar, loading, filtrosIniciales }) => {
     onBuscar(filtrosLimpios);
   };
 
+  // ==========================================
+// BOTÓN "COBRANZAS DEL MES"
+// ==========================================
+const handleFiltrarMes = () => {
+  const hoy = new Date();
+  const anio = hoy.getFullYear();
+  const mes = hoy.getMonth(); // 0-11
+
+  // Primer día del mes
+  const primerDia = new Date(anio, mes, 1);
+  // Último día del mes (día 0 del mes siguiente = último día del mes actual)
+  const ultimoDia = new Date(anio, mes + 1, 0);
+
+  const formatFecha = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const dia = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${dia}`;
+  };
+
+  const fechaDesdeStr = formatFecha(primerDia);
+  const fechaHastaStr = formatFecha(ultimoDia);
+
+  const filtrosMes = {
+    ...filtros,
+    fechaDesde: fechaDesdeStr,
+    fechaHasta: fechaHastaStr,
+    // Limpiar otros filtros de fecha para que no interfieran
+    fechaVentaDesde: '',
+    fechaVentaHasta: ''
+  };
+
+  setFiltros(filtrosMes);
+
+  // Ejecutar búsqueda automáticamente
+  const filtrosLimpios = {};
+  Object.keys(filtrosMes).forEach(key => {
+    if (filtrosMes[key] && String(filtrosMes[key]).trim() !== '') {
+      filtrosLimpios[key] = filtrosMes[key];
+    }
+  });
+  onBuscar(filtrosLimpios);
+};
+
   const handleSubmit = (e) => {
     e.preventDefault();
     const filtrosLimpios = {};
@@ -165,13 +209,13 @@ export const BuscadorCobranza = ({ onBuscar, loading, filtrosIniciales }) => {
             {/* Botón HOY */}
             <Button
               variant={esFiltroHoy ? 'danger' : 'outline-danger'}
-              onClick={handleFiltrarHoy}
+              onClick={handleFiltrarMes}
               className="rounded-3 d-flex align-items-center"
               disabled={loading}
               style={{ fontWeight: '500' }}
             >
               <i className="bi bi-calendar-check me-1"></i>
-              Hoy
+              Mes
               {esFiltroHoy && (
                 <Badge 
                   bg="light" 

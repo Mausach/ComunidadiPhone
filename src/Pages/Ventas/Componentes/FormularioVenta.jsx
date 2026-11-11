@@ -1,3 +1,5 @@
+// Ventas/Componentes/FormularioVenta.jsx
+
 import React, { useState, useRef, useEffect } from 'react';
 import {
     Form, Row, Col, Button, Card, InputGroup, Badge,
@@ -40,8 +42,8 @@ export const FormularioVenta = ({
             telefono2: '',
             email: '',
             direccion: '',
-            relacion: '',      // 👈 NUEVO
-            ocupacion: ''      // 👈 NUEVO
+            relacion: '',
+            ocupacion: ''
         },
         montoCuota: 0,
         cantidadCuotas: 0,
@@ -72,12 +74,15 @@ export const FormularioVenta = ({
     const [nuevaNota, setNuevaNota] = useState('');
     const alertRef = useRef(null);
 
-    // Tipos de venta
+    // ==========================================
+    // TIPOS DE VENTA (con nuevo plan_canje_cuotas)
+    // ==========================================
     const tiposVenta = [
         { value: 'contado', label: 'Contado' },
         { value: 'sistema1', label: 'Sistema 1 (Cuotas con entrega)' },
         { value: 'sistema2', label: 'Sistema 2 (Cuotas sin entrega)' },
-        { value: 'plan_canje', label: 'Plan Canje' }
+        { value: 'plan_canje', label: 'Plan Canje' },
+        { value: 'plan_canje_cuotas', label: 'Plan Canje + Cuotas' }
     ];
 
     const estadosProducto = [
@@ -106,6 +111,9 @@ export const FormularioVenta = ({
         { value: 'diario', label: 'Diario' }
     ];
 
+    // ==========================================
+    // EFECTOS
+    // ==========================================
     // Efecto: forzar garante obligatorio en sistema1
     useEffect(() => {
         if (formData.tipoVenta === 'sistema1') {
@@ -142,6 +150,9 @@ export const FormularioVenta = ({
         }
     }, [formData.cuotaEntrega, formData.frecuencia, formData.fechaRealizada, formData.tipoVenta]);
 
+    // ==========================================
+    // FUNCIONES AUXILIARES
+    // ==========================================
     const cargarEquiposDisponibles = async () => {
         setCargandoEquipos(true);
         try {
@@ -213,6 +224,9 @@ export const FormularioVenta = ({
         setTimeout(() => setAlert({ show: false, message: '', variant: 'danger' }), 5000);
     };
 
+    // ==========================================
+    // MANEJADORES
+    // ==========================================
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
         if (name.includes('.')) {
@@ -296,6 +310,9 @@ export const FormularioVenta = ({
         }
     };
 
+    // ==========================================
+    // CÁLCULOS
+    // ==========================================
     const calcularTotalPagos = () => formData.pagos.reduce((total, pago) => total + (parseFloat(pago.monto) || 0), 0);
 
     const calcularTotalDescuentos = () => formData.descuentos.reduce((total, d) => total + (parseFloat(d.monto) || 0), 0);
@@ -303,6 +320,7 @@ export const FormularioVenta = ({
     const calcularMontoTotal = () => {
         const valorProducto = parseFloat(formData.producto.valor) || 0;
         const totalDescuentos = calcularTotalDescuentos();
+        const valorCanje = parseFloat(formData.equipoCanje.valorTasado) || 0;
 
         if (formData.tipoVenta === 'sistema2') {
             return (parseFloat(formData.montoCuota) || 0) * (parseInt(formData.cantidadCuotas) || 0) - totalDescuentos;
@@ -316,12 +334,21 @@ export const FormularioVenta = ({
             return valorProducto - totalDescuentos;
         }
 
+        if (formData.tipoVenta === 'plan_canje_cuotas') {
+            // Total = (montoCuota × cantidadCuotas) + valorCanje - descuentos
+            const totalCuotas = (parseFloat(formData.montoCuota) || 0) * (parseInt(formData.cantidadCuotas) || 0);
+            return totalCuotas + valorCanje - totalDescuentos;
+        }
+
         // Contado
         return valorProducto - totalDescuentos;
     };
 
     const getSaldoPendiente = () => calcularMontoTotal() - calcularTotalPagos();
 
+    // ==========================================
+    // SUBMIT
+    // ==========================================
     const handleSubmit = async (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -356,6 +383,14 @@ export const FormularioVenta = ({
             if (!formData.equipoCanje.valorTasado || parseFloat(formData.equipoCanje.valorTasado) <= 0) { showAlert('El valor tasado del equipo debe ser mayor a 0', 'warning'); return; }
         }
 
+        // 👇 NUEVO: Validaciones para plan_canje_cuotas
+        if (formData.tipoVenta === 'plan_canje_cuotas') {
+            if (!formData.equipoCanje.nombre.trim()) { showAlert('El nombre del equipo a canjear es obligatorio', 'warning'); return; }
+            if (!formData.equipoCanje.valorTasado || parseFloat(formData.equipoCanje.valorTasado) <= 0) { showAlert('El valor tasado del equipo debe ser mayor a 0', 'warning'); return; }
+            if (!formData.montoCuota || parseFloat(formData.montoCuota) <= 0) { showAlert('El monto por cuota debe ser mayor a 0', 'warning'); return; }
+            if (!formData.cantidadCuotas || parseInt(formData.cantidadCuotas) <= 0) { showAlert('La cantidad de cuotas debe ser mayor a 0', 'warning'); return; }
+        }
+
         // Validar garante - SISTEMA 1 (obligatorio + campos nuevos)
         if (formData.tipoVenta === 'sistema1') {
             const { nombre, apellido, dni, telefono, direccion, relacion, ocupacion } = formData.garante;
@@ -382,6 +417,9 @@ export const FormularioVenta = ({
             }
         }
 
+        // ==========================================
+        // PAYLOAD
+        // ==========================================
         const payload = {
             tipoVenta: formData.tipoVenta,
             localidad: formData.localidad,
@@ -424,14 +462,15 @@ export const FormularioVenta = ({
                 telefono2: formData.garante.telefono2.trim(),
                 email: formData.garante.email.trim() || '',
                 direccion: formData.garante.direccion.trim(),
-                relacion: formData.garante.relacion.trim(),   // 👈 NUEVO
-                ocupacion: formData.garante.ocupacion.trim()  // 👈 NUEVO
+                relacion: formData.garante.relacion.trim(),
+                ocupacion: formData.garante.ocupacion.trim()
             } : {},
             montoCuota: parseFloat(formData.montoCuota) || 0,
             cantidadCuotas: parseInt(formData.cantidadCuotas) || 0,
             cuotaEntrega: parseInt(formData.cuotaEntrega) || 0,
             frecuencia: formData.frecuencia || 'mensual',
-            equipoCanje: formData.tipoVenta === 'plan_canje' ? {
+            // 👇 Ahora incluye tanto plan_canje como plan_canje_cuotas
+            equipoCanje: ['plan_canje', 'plan_canje_cuotas'].includes(formData.tipoVenta) ? {
                 nombre: formData.equipoCanje.nombre.trim(),
                 modelo: formData.equipoCanje.modelo.trim() || '',
                 imei: formData.equipoCanje.imei.trim() || '',
@@ -454,13 +493,19 @@ export const FormularioVenta = ({
         }
     };
 
-    const mostrarCuotas = ['sistema1', 'sistema2'].includes(formData.tipoVenta);
-    const mostrarGarante = ['sistema1', 'sistema2', 'plan_canje'].includes(formData.tipoVenta);
-    const mostrarEquipoCanje = formData.tipoVenta === 'plan_canje';
-    const mostrarPagos = ['contado', 'sistema1', 'plan_canje'].includes(formData.tipoVenta);
+    // ==========================================
+    // FLAGS DE VISIBILIDAD
+    // ==========================================
+    const mostrarCuotas = ['sistema1', 'sistema2', 'plan_canje_cuotas'].includes(formData.tipoVenta);
+    const mostrarGarante = ['sistema1', 'sistema2', 'plan_canje', 'plan_canje_cuotas'].includes(formData.tipoVenta);
+    const mostrarEquipoCanje = ['plan_canje', 'plan_canje_cuotas'].includes(formData.tipoVenta);
+    const mostrarPagos = ['contado', 'sistema1', 'plan_canje', 'plan_canje_cuotas'].includes(formData.tipoVenta);
     const mostrarDescuentos = true;
     const mostrarSeccionEquipos = formData.localidad && formData.tipoVenta !== 'sistema2';
     const garanteObligatorio = formData.tipoVenta === 'sistema1';
+    const mostrarCuotaEntrega = formData.tipoVenta === 'sistema2';
+    // 👇 Nueva sección: para plan_canje_cuotas mostramos sección de "Cuotas + Canje"
+    const esPlanCanjeCuotas = formData.tipoVenta === 'plan_canje_cuotas';
 
     return (
         <Card className="border-0 shadow-sm" style={{ borderRadius: '16px' }}>
@@ -487,7 +532,9 @@ export const FormularioVenta = ({
                 )}
 
                 <Form onSubmit={handleSubmit}>
-                    {/* SECCIÓN 1: DATOS GENERALES */}
+                    {/* ==========================================
+                        SECCIÓN 1: DATOS GENERALES
+                        ========================================== */}
                     <div className="border rounded-3 p-3 mb-4" style={{ backgroundColor: '#f8f9fa' }}>
                         <h6 className="fw-bold text-primary mb-3" style={{ fontSize: '0.85rem' }}><i className="bi bi-info-circle me-2"></i>Datos Generales</h6>
                         <Row className="g-3">
@@ -534,9 +581,19 @@ export const FormularioVenta = ({
                                 </Form.Group>
                             </Col>
                         </Row>
+
+                        {/* Banner informativo para plan_canje_cuotas */}
+                        {esPlanCanjeCuotas && (
+                            <Alert variant="info" className="mt-3 mb-0 rounded-3 py-2 px-3" style={{ fontSize: '0.85rem' }}>
+                                <i className="bi bi-info-circle me-2"></i>
+                                <strong>Plan Canje + Cuotas:</strong> El cliente entrega un equipo como parte de pago y abona el resto en cuotas. Los pagos en efectivo son <strong>opcionales</strong>.
+                            </Alert>
+                        )}
                     </div>
 
-                    {/* SECCIÓN: EQUIPOS DISPONIBLES */}
+                    {/* ==========================================
+                        SECCIÓN: EQUIPOS DISPONIBLES
+                        ========================================== */}
                     {mostrarSeccionEquipos && (
                         <div className="border rounded-3 p-3 mb-4" style={{ backgroundColor: '#e8f0fe' }}>
                             <h6 className="fw-bold text-primary mb-3" style={{ fontSize: '0.85rem' }}>
@@ -602,7 +659,9 @@ export const FormularioVenta = ({
                         </div>
                     )}
 
-                    {/* SECCIÓN 2: PRODUCTO */}
+                    {/* ==========================================
+                        SECCIÓN 2: PRODUCTO
+                        ========================================== */}
                     <div className="border rounded-3 p-3 mb-4" style={{ backgroundColor: '#f8f9fa' }}>
                         <h6 className="fw-bold text-secondary mb-3" style={{ fontSize: '0.85rem' }}><i className="bi bi-phone me-2"></i>Datos del Producto</h6>
                         <Row className="g-3">
@@ -662,10 +721,18 @@ export const FormularioVenta = ({
                         </Row>
                     </div>
 
-                    {/* SECCIÓN 3: CUOTAS (sistema1 y sistema2) */}
+                    {/* ==========================================
+                        SECCIÓN 3: CUOTAS (sistema1, sistema2, plan_canje_cuotas)
+                        ========================================== */}
                     {mostrarCuotas && (
                         <div className="border rounded-3 p-3 mb-4" style={{ backgroundColor: '#f8f9fa' }}>
-                            <h6 className="fw-bold text-danger mb-3" style={{ fontSize: '0.85rem' }}><i className="bi bi-calendar-event me-2"></i>Configuración de Cuotas</h6>
+                            <h6 className="fw-bold text-danger mb-3" style={{ fontSize: '0.85rem' }}>
+                                <i className="bi bi-calendar-event me-2"></i>
+                                Configuración de Cuotas
+                                {esPlanCanjeCuotas && (
+                                    <Badge bg="info" className="ms-2">Canje + Cuotas</Badge>
+                                )}
+                            </h6>
                             <Row className="g-3">
                                 <Col md={3}>
                                     <Form.Group>
@@ -684,7 +751,7 @@ export const FormularioVenta = ({
                                             placeholder="Ej: 12" className="rounded-3" disabled={isLoading} min={1} max={60} />
                                     </Form.Group>
                                 </Col>
-                                {formData.tipoVenta === 'sistema2' && (
+                                {mostrarCuotaEntrega && (
                                     <Col md={3}>
                                         <Form.Group>
                                             <Form.Label className="small fw-semibold text-secondary">
@@ -712,7 +779,7 @@ export const FormularioVenta = ({
                                         </Form.Group>
                                     </Col>
                                 )}
-                                <Col md={formData.tipoVenta === 'sistema2' ? 3 : 6}>
+                                <Col md={mostrarCuotaEntrega ? 3 : 6}>
                                     <Form.Group>
                                         <Form.Label className="small fw-semibold text-secondary"><i className="bi bi-arrow-repeat me-1"></i>Frecuencia de Pago</Form.Label>
                                         <Form.Select name="frecuencia" value={formData.frecuencia} onChange={handleChange} className="rounded-3" disabled={isLoading}>
@@ -721,13 +788,34 @@ export const FormularioVenta = ({
                                     </Form.Group>
                                 </Col>
                             </Row>
+
+                            {/* Vista previa del cálculo para plan_canje_cuotas */}
+                            {esPlanCanjeCuotas && formData.montoCuota > 0 && formData.cantidadCuotas > 0 && (
+                                <div className="mt-3 p-2 bg-light rounded-3">
+                                    <small className="text-muted">
+                                        <i className="bi bi-calculator me-1"></i>
+                                        <strong>Total cuotas:</strong> ${(parseFloat(formData.montoCuota) * parseInt(formData.cantidadCuotas)).toLocaleString()}
+                                        {(parseFloat(formData.equipoCanje.valorTasado) || 0) > 0 && (
+                                            <> + <strong>Canje:</strong> ${parseFloat(formData.equipoCanje.valorTasado).toLocaleString()} = <strong className="text-success">${calcularMontoTotal().toLocaleString()}</strong></>
+                                        )}
+                                    </small>
+                                </div>
+                            )}
                         </div>
                     )}
 
-                    {/* SECCIÓN 4: EQUIPO CANJE */}
+                    {/* ==========================================
+                        SECCIÓN 4: EQUIPO CANJE (plan_canje y plan_canje_cuotas)
+                        ========================================== */}
                     {mostrarEquipoCanje && (
                         <div className="border rounded-3 p-3 mb-4" style={{ backgroundColor: '#f8f9fa' }}>
-                            <h6 className="fw-bold text-info mb-3" style={{ fontSize: '0.85rem' }}><i className="bi bi-arrow-left-right me-2"></i>Equipo a Canjear (Recibido del Cliente)</h6>
+                            <h6 className="fw-bold text-info mb-3" style={{ fontSize: '0.85rem' }}>
+                                <i className="bi bi-arrow-left-right me-2"></i>
+                                Equipo a Canjear (Recibido del Cliente)
+                                {esPlanCanjeCuotas && (
+                                    <Badge bg="info" className="ms-2">Obligatorio</Badge>
+                                )}
+                            </h6>
                             <Row className="g-3">
                                 <Col md={6}>
                                     <Form.Group>
@@ -791,12 +879,19 @@ export const FormularioVenta = ({
                         </div>
                     )}
 
-                    {/* SECCIÓN 5: PAGOS */}
+                    {/* ==========================================
+                        SECCIÓN 5: PAGOS
+                        ========================================== */}
                     {mostrarPagos && (
                         <div className="border rounded-3 p-3 mb-4" style={{ backgroundColor: '#f8f9fa' }}>
                             <h6 className="fw-bold text-success mb-3" style={{ fontSize: '0.85rem' }}>
                                 <i className="bi bi-wallet2 me-2"></i>
-                                {formData.tipoVenta === 'plan_canje' ? 'Entrega en Efectivo' : 'Entrega'}
+                                {formData.tipoVenta === 'plan_canje' || formData.tipoVenta === 'plan_canje_cuotas'
+                                    ? 'Entrega en Efectivo (Opcional)'
+                                    : 'Entrega'}
+                                {esPlanCanjeCuotas && (
+                                    <Badge bg="success" className="ms-2">Opcional</Badge>
+                                )}
                             </h6>
                             {formData.pagos.map((pago, index) => (
                                 <Row key={index} className="g-2 mb-2 align-items-end">
@@ -838,7 +933,9 @@ export const FormularioVenta = ({
                         </div>
                     )}
 
-                    {/* SECCIÓN 6: DESCUENTOS */}
+                    {/* ==========================================
+                        SECCIÓN 6: DESCUENTOS
+                        ========================================== */}
                     {mostrarDescuentos && (
                         <div className="border rounded-3 p-3 mb-4" style={{ backgroundColor: '#f8f9fa' }}>
                             <h6 className="fw-bold text-warning mb-3" style={{ fontSize: '0.85rem' }}>
@@ -918,7 +1015,9 @@ export const FormularioVenta = ({
                         </div>
                     )}
 
-                    {/* SECCIÓN 7: GARANTE */}
+                    {/* ==========================================
+                        SECCIÓN 7: GARANTE
+                        ========================================== */}
                     {mostrarGarante && (
                         <div className="border rounded-3 p-3 mb-4" style={{ backgroundColor: '#f8f9fa' }}>
                             <div className="d-flex justify-content-between align-items-center mb-3">
@@ -973,7 +1072,6 @@ export const FormularioVenta = ({
                                         </Form.Group>
                                     </Col>
 
-                                    {/* 👈 NUEVOS CAMPOS */}
                                     <Col md={6}>
                                         <Form.Group>
                                             <Form.Label className="small fw-semibold text-secondary">
@@ -1019,7 +1117,9 @@ export const FormularioVenta = ({
                         </div>
                     )}
 
-                    {/* NOTAS */}
+                    {/* ==========================================
+                        NOTAS
+                        ========================================== */}
                     <div className="border rounded-3 p-3 mb-4" style={{ backgroundColor: '#f8f9fa' }}>
                         <h6 className="fw-bold text-secondary mb-3" style={{ fontSize: '0.85rem' }}><i className="bi bi-chat-left-text me-2"></i>Notas y Observaciones</h6>
                         <Form.Group className="mb-2">
@@ -1053,7 +1153,9 @@ export const FormularioVenta = ({
                         )}
                     </div>
 
-                    {/* RESUMEN */}
+                    {/* ==========================================
+                        RESUMEN
+                        ========================================== */}
                     <div className="border rounded-3 p-3 mb-4" style={{ backgroundColor: '#f8f9fa' }}>
                         <h6 className="fw-bold text-primary mb-3" style={{ fontSize: '0.85rem' }}><i className="bi bi-clipboard-data me-2"></i>Resumen de la Venta</h6>
                         <Row className="g-3">
@@ -1067,8 +1169,11 @@ export const FormularioVenta = ({
                                 <Col md={4}><div className="p-2 bg-white rounded-3"><small className="text-muted d-block">Origen</small><Badge bg={equipoSeleccionado.origen === 'stock' ? 'primary' : 'info'}>{equipoSeleccionado.origen}</Badge></div></Col>
                             )}
                             <Col md={4}><div className="p-2 bg-white rounded-3"><small className="text-muted d-block">Monto Total</small><span className="fw-bold text-success">${calcularMontoTotal().toLocaleString()}</span></div></Col>
-                            {formData.tipoVenta === 'sistema2' && formData.cuotaEntrega > 0 && (
+                            {mostrarCuotaEntrega && formData.cuotaEntrega > 0 && (
                                 <Col md={4}><div className="p-2 bg-white rounded-3"><small className="text-muted d-block">Entrega</small><Badge bg="info">Cuota {formData.cuotaEntrega} ({formData.fechaEntrega ? new Date(formData.fechaEntrega).toLocaleDateString('es-AR') : 'N/A'})</Badge></div></Col>
+                            )}
+                            {esPlanCanjeCuotas && (parseFloat(formData.equipoCanje.valorTasado) || 0) > 0 && (
+                                <Col md={4}><div className="p-2 bg-white rounded-3"><small className="text-muted d-block">Valor Canje</small><span className="fw-bold text-info">${parseFloat(formData.equipoCanje.valorTasado).toLocaleString()}</span></div></Col>
                             )}
                             {formData.descuentos.length > 0 && (
                                 <Col md={4}><div className="p-2 bg-white rounded-3"><small className="text-muted d-block">Descuentos</small><span className="fw-bold text-danger">-${calcularTotalDescuentos().toLocaleString()}</span></div></Col>

@@ -1,121 +1,100 @@
 // src/Pages/Ceo/Componentes/ReportesNuevo.jsx
-
 import React, { useState } from 'react';
-import { Container, Row, Col, Card, Nav, Badge } from 'react-bootstrap';
+import { Container, Row, Col, Nav } from 'react-bootstrap';
 import { ResumenGeneral } from './ResumenGeneral';
 import { VentasDirectas } from './VentasDirectas';
 import { SistemasReporte } from './SistemasReporte';
 import { PanelClientes } from './PanelClientes';
 import { ControlGastos } from './ControlGastos';
-
-// Sub-componentes (los crearemos después)
-
+import { COLORS } from '../../Cobranza/Helperss/colors'; // Ajustá la ruta
 
 export const ReportesNuevo = () => {
   const [tabActivo, setTabActivo] = useState('resumen');
 
   const tabs = [
-    { 
-      id: 'resumen', 
-      label: 'Resumen', 
-      icon: 'bi-graph-up',
-      descripcion: 'Vista general del negocio'
-    },
-    { 
-      id: 'ventas', 
-      label: 'Ventas Directas', 
-      icon: 'bi-cash-coin',
-      descripcion: 'Contado y Plan Canje'
-    },
-    { 
-      id: 'sistemas', 
-      label: 'Sistemas', 
-      icon: 'bi-calendar-check',
-      descripcion: 'Sistema 1 y Sistema 2'
-    },
-    { 
-      id: 'clientes', 
-      label: 'Clientes', 
-      icon: 'bi-people',
-      descripcion: 'Panel de información'
-    },
-    { 
-      id: 'gastos', 
-      label: 'Gastos', 
-      icon: 'bi-receipt',
-      descripcion: 'Control de gastos'
-    }
+    { id: 'resumen', label: 'Resumen', icon: 'graph-up', descripcion: 'Vista general del negocio' },
+    { id: 'ventas', label: 'Ventas Directas', icon: 'cash-coin', descripcion: 'Contado y Plan Canje' },
+    { id: 'sistemas', label: 'Sistemas', icon: 'calendar-check', descripcion: 'Sistema 1 y Sistema 2' },
+    { id: 'clientes', label: 'Clientes', icon: 'people', descripcion: 'Panel de información' },
+    { id: 'gastos', label: 'Gastos', icon: 'receipt', descripcion: 'Control de gastos' }
   ];
+
+  const tabActual = tabs.find(t => t.id === tabActivo);
 
   const renderContenido = () => {
     switch (tabActivo) {
-      case 'resumen':
-        return <ResumenGeneral />;
-      case 'ventas':
-        return <VentasDirectas />;
-      case 'sistemas':
-        return <SistemasReporte />;
-      case 'clientes':
-        return <PanelClientes />;
-      case 'gastos':
-        return <ControlGastos />;
-      default:
-        return <ResumenGeneral />;
+      case 'resumen': return <ResumenGeneral />;
+      case 'ventas': return <VentasDirectas />;
+      case 'sistemas': return <SistemasReporte />;
+      case 'clientes': return <PanelClientes />;
+      case 'gastos': return <ControlGastos />;
+      default: return <ResumenGeneral />;
     }
   };
 
   return (
-    <Container fluid className="py-4">
-      {/* Header */}
-      <div className="mb-4">
-        <h3 className="fw-bold" style={{ color: '#1a1a1a' }}>
-          <i className="bi bi-file-earmark-bar-graph me-2" style={{ color: '#3483FA' }}></i>
-          Reportes
-        </h3>
-        <p className="text-muted">
-          Análisis completo del negocio · {tabs.find(t => t.id === tabActivo)?.descripcion}
-        </p>
-      </div>
+    <div style={{ minHeight: '100vh', backgroundColor: COLORS.bgGeneral }}>
+      <Container fluid className="py-4" style={{ maxWidth: '1400px' }}>
+        
+        {/* Header */}
+        <div className="mb-4">
+          <small style={{ color: COLORS.textoSecundario, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', fontSize: '0.7rem' }}>
+            Análisis · Reportes
+          </small>
+          <h2 className="fw-bold mb-1" style={{ color: COLORS.textoPrincipal, fontSize: '2rem' }}>
+            <i className="bi bi-file-earmark-bar-graph me-2" style={{ color: COLORS.azul }}></i>
+            Panel de Reportes
+          </h2>
+          <p style={{ color: COLORS.textoSecundario, fontSize: '0.9rem' }} className="mb-0">
+            {tabActual?.descripcion}
+          </p>
+        </div>
 
-      {/* Navegación de Tabs */}
-      <Card className="shadow-sm border-0 mb-4" style={{ borderRadius: '12px' }}>
-        <Card.Body className="p-2">
-          <Nav variant="tabs" className="d-flex flex-wrap" style={{ borderBottom: 'none', gap: '4px' }}>
-            {tabs.map(tab => (
-              <Nav.Item key={tab.id}>
-                <Nav.Link
-                  onClick={() => setTabActivo(tab.id)}
-                  className="rounded-3"
-                  style={{
-                    padding: '12px 20px',
-                    border: tabActivo === tab.id ? '2px solid #3483FA' : '2px solid transparent',
-                    backgroundColor: tabActivo === tab.id ? '#e8f0fe' : 'transparent',
-                    color: tabActivo === tab.id ? '#3483FA' : '#666',
-                    fontWeight: tabActivo === tab.id ? '600' : '400',
-                    fontSize: '0.9rem',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    borderRadius: '8px'
-                  }}
-                >
-                  <i className={`bi ${tab.icon} me-2`}></i>
-                  {tab.label}
-                  {tabActivo === tab.id && (
-                    <Badge bg="primary" className="ms-2" style={{ fontSize: '0.65rem' }}>
-                      Activo
-                    </Badge>
-                  )}
-                </Nav.Link>
-              </Nav.Item>
-            ))}
-          </Nav>
-        </Card.Body>
-      </Card>
+        {/* Navegación tipo Pills */}
+        <div 
+          className="d-flex flex-wrap gap-2 mb-4 p-2 rounded-4" 
+          style={{ backgroundColor: COLORS.cardBg, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}
+        >
+          {tabs.map(tab => {
+            const isActive = tabActivo === tab.id;
+            return (
+              <div
+                key={tab.id}
+                onClick={() => setTabActivo(tab.id)}
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  backgroundColor: isActive ? COLORS.azulSuave : 'transparent',
+                  color: isActive ? COLORS.azul : COLORS.textoSecundario,
+                  fontWeight: isActive ? '700' : '500',
+                  fontSize: '0.9rem',
+                  transition: 'all 0.2s ease',
+                  userSelect: 'none'
+                }}
+                onMouseEnter={(e) => {
+                  if (!isActive) e.currentTarget.style.backgroundColor = COLORS.bgGeneral;
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
+                <i className={`bi bi-${tab.icon}`} style={{ fontSize: '1rem' }}></i>
+                {tab.label}
+              </div>
+            );
+          })}
+        </div>
 
-      {/* Contenido del Tab */}
-      <div className="tab-content">
-        {renderContenido()}
-      </div>
-    </Container>
+        {/* Contenido */}
+        <div className="tab-content">
+          {renderContenido()}
+        </div>
+
+      </Container>
+    </div>
   );
 };

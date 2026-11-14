@@ -1,306 +1,147 @@
+// Pages/HomeLogin/Componentes/CardLogin.jsx
 import React, { useState } from 'react';
-import { Button, Form, Card, InputGroup, Alert, Container, Row, Col } from 'react-bootstrap';
+import { Button, Form, Card, InputGroup, Spinner } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { starLogin } from '../Helpers/StartLogin';
 import { firstLogin } from '../Helpers/FistrLogin';
-//import { starLogin, firstLogin } from '../Helpers/StarLogin';
+import { COLORS } from '../../Cobranza/Helperss/colors';
 
 export const CardLogin = () => {
     const [showPassword, setShowPassword] = useState(false);
-    const [user, setUser] = useState({
-        email: "",
-        password: "",
-    });
+    const [user, setUser] = useState({ email: '', password: '' });
     const [isLoading, setIsLoading] = useState(false);
-    const [alert, setAlert] = useState({
-        show: false,
-        message: '',
-        variant: 'danger',
-        icon: null
-    });
+    const [alert, setAlert] = useState({ show: false, message: '', variant: 'danger' });
     const navigate = useNavigate();
 
     const togglePassword = () => setShowPassword(!showPassword);
 
     const onInputChange = (e) => {
-        setUser({
-            ...user,
-            [e.target.name]: e.target.value,
-        });
-        if (alert.show) {
-            setAlert({ ...alert, show: false });
-        }
+        setUser({ ...user, [e.target.name]: e.target.value });
+        if (alert.show) setAlert({ ...alert, show: false });
     };
 
     const showAlert = (message, variant = 'danger') => {
-        setAlert({
-            show: true,
-            message,
-            variant,
-        });
-
-        setTimeout(() => {
-            setAlert({ show: false, message: '', variant: 'danger' });
-        }, 5000);
+        setAlert({ show: true, message, variant });
+        setTimeout(() => setAlert({ show: false, message: '', variant: 'danger' }), 5000);
     };
 
     const onSubmit = async (e) => {
         e.preventDefault();
-        
         const { email, password } = user;
         const emailTrimmed = email.trim();
         const passwordTrimmed = password.trim();
 
-        if (emailTrimmed === "" && passwordTrimmed === "") {
-            showAlert('Completá tu correo electrónico para continuar', 'warning');
-            return;
-        }
+        if (emailTrimmed === '' && passwordTrimmed === '') return showAlert('Completá tu correo electrónico para continuar', 'warning');
+        if (emailTrimmed === '' && passwordTrimmed !== '') return showAlert('Ingresá tu correo electrónico', 'warning');
 
-        if (emailTrimmed === "" && passwordTrimmed !== "") {
-            showAlert('Ingresá tu correo electrónico', 'warning');
-            return;
-        }
-
-        if (emailTrimmed !== "" && passwordTrimmed === "") {
+        if (emailTrimmed !== '' && passwordTrimmed === '') {
             setIsLoading(true);
             try {
-                //console.log(emailTrimmed)
                 await firstLogin(emailTrimmed, navigate);
-                showAlert('¡Te damosla bienvenida a tu primer acceso!', 'success');
+                showAlert('¡Te damos la bienvenida a tu primer acceso!', 'success');
             } catch (error) {
-                showAlert(
-                    error.response?.data?.message || 'Error al verificar tu usuario. Intentá de nuevo.',
-                    'danger'
-                );
-            } finally {
-                setIsLoading(false);
-            }
+                showAlert(error.response?.data?.message || 'Error al verificar tu usuario.', 'danger');
+            } finally { setIsLoading(false); }
             return;
         }
 
-        if (emailTrimmed !== "" && passwordTrimmed !== "") {
+        if (emailTrimmed !== '' && passwordTrimmed !== '') {
             setIsLoading(true);
             try {
-                
                 await starLogin(emailTrimmed, passwordTrimmed, navigate);
                 showAlert('¡Bienvenido! Redirigiendo al panel...', 'success');
             } catch (error) {
-                showAlert(
-                    error.response?.data?.message || 'Usuario o contraseña incorrectos. Verificá tus datos.',
-                    'danger'
-                );
-            } finally {
-                setIsLoading(false);
-            }
+                showAlert(error.response?.data?.message || 'Usuario o contraseña incorrectos.', 'danger');
+            } finally { setIsLoading(false); }
             return;
         }
     };
 
     return (
-        <Container fluid >
-            <Row className="w-100 justify-content-center">
-                <Col >
-                    <Card className="border-0 shadow-sm" style={{ borderRadius: '16px' }}>
-                        <Card.Body className="p-4 p-md-5">
-                            {/* Título y subtítulo */}
-                            <div className="text-center mb-4">
-                                <h4 className="fw-bold mb-1" style={{ color: '#1a1a1a' }}>
-                                    Ingresá a tu cuenta
-                                </h4>
-                                <p className="text-muted small mb-0">
-                                    Ingreso solo para el equipo de comunidad iPhone
-                                </p>
-                            </div>
+        <Card className="border-0 shadow-sm" style={{ borderRadius: '20px', backgroundColor: COLORS.cardBg }}>
+            <Card.Body className="p-4 p-md-5">
+                <div className="text-center mb-4">
+                    <h4 className="fw-bold mb-1" style={{ color: COLORS.textoPrincipal }}>
+                        Ingresá a tu cuenta
+                    </h4>
+                    <p style={{ color: COLORS.textoSecundario }} className="small mb-0">
+                        Acceso exclusivo para el equipo de Comunidad iPhone
+                    </p>
+                </div>
 
-                            {/* Alertas estilo Mercado Pago */}
-                            {alert.show && (
-                                <Alert 
-                                    variant={alert.variant}
-                                    className="d-flex align-items-center rounded-3 border-0 shadow-sm mb-3"
-                                    style={{
-                                        padding: '12px 16px',
-                                        fontSize: '0.9rem',
-                                        animation: 'fadeIn 0.3s ease'
-                                    }}
-                                >
-                                    <i className={`bi bi-${alert.variant === 'success' ? 'check-circle' : 'x-circle'} me-2`}></i>
-                                    <span className="flex-grow-1">
-                                        {alert.message}
-                                    </span>
-                                    <Button 
-                                        variant="link" 
-                                        className="p-0 ms-2 text-decoration-none"
-                                        style={{ color: 'inherit', opacity: 0.7 }}
-                                        onClick={() => setAlert({ show: false, message: '', variant: 'danger' })}
-                                    >
-                                        <i className="bi bi-x-circle"></i>
-                                    </Button>
-                                </Alert>
-                            )}
+                {alert.show && (
+                    <div className="rounded-3 p-3 mb-4 d-flex align-items-center small"
+                        style={{
+                            backgroundColor: alert.variant === 'success' ? COLORS.verdeSuave : COLORS.rojoSuave,
+                            color: alert.variant === 'success' ? COLORS.verde : COLORS.rojo
+                        }}>
+                        <i className={`bi bi-${alert.variant === 'success' ? 'check-circle-fill' : 'exclamation-circle-fill'} me-2 fs-5`}></i>
+                        <span className="flex-grow-1 fw-semibold">{alert.message}</span>
+                    </div>
+                )}
 
-                            <Form onSubmit={onSubmit}>
-                                {/* Campo de email */}
-                                <Form.Group className="mb-3">
-                                    <Form.Label className="small fw-semibold text-secondary">
-                                        Correo electrónico
-                                    </Form.Label>
-                                    <InputGroup className="border rounded-3 overflow-hidden">
-                                        <InputGroup.Text 
-                                            className="border-0 bg-transparent ps-3"
-                                            style={{ color: '#6c757d' }}
-                                        >
-                                            <i className="bi bi-envelope"></i>
-                                        </InputGroup.Text>
-                                        <Form.Control
-                                            type="email"
-                                            placeholder="ejemplo@correo.com"
-                                            minLength={3}
-                                            maxLength={50}
-                                            name="email"
-                                            value={user.email}
-                                            onChange={onInputChange}
-                                            className="border-0 py-2"
-                                            style={{ 
-                                                backgroundColor: 'transparent',
-                                                boxShadow: 'none',
-                                                fontSize: '0.95rem'
-                                            }}
-                                            disabled={isLoading}
-                                        />
-                                    </InputGroup>
-                                </Form.Group>
+                <Form onSubmit={onSubmit}>
+                    {/* Email */}
+                    <Form.Group className="mb-3">
+                        <Form.Label className="small fw-semibold" style={{ color: COLORS.textoSecundario }}>Correo electrónico</Form.Label>
+                        <InputGroup className="rounded-3 border" style={{ borderColor: COLORS.bordes }}>
+                            <InputGroup.Text className="border-0 bg-transparent ps-3">
+                                <i className="bi bi-envelope" style={{ color: COLORS.textoSecundario }}></i>
+                            </InputGroup.Text>
+                            <Form.Control
+                                type="email"
+                                placeholder="ejemplo@correo.com"
+                                name="email"
+                                value={user.email}
+                                onChange={onInputChange}
+                                className="border-0 py-2 shadow-none"
+                                style={{ fontSize: '0.95rem' }}
+                                disabled={isLoading}
+                            />
+                        </InputGroup>
+                    </Form.Group>
 
-                                {/* Campo de contraseña */}
-                                <Form.Group className="mb-3">
-                                    <div className="d-flex justify-content-between align-items-center">
-                                        <Form.Label className="small fw-semibold text-secondary mb-0">
-                                            Contraseña
-                                        </Form.Label>
-                                        <Button 
-                                            variant="link" 
-                                            className="p-0 text-decoration-none small"
-                                            style={{ fontSize: '0.8rem', color: '#3483FA' }}
-                                            onClick={() => {/* Lógica para recuperar contraseña mensaje que contacte con administracion */}}
-                                        >
-                                            ¿Olvidaste tu clave?
-                                        </Button>
-                                    </div>
-                                    <InputGroup className="border rounded-3 overflow-hidden">
-                                        <Form.Control
-                                            type={showPassword ? "text" : "password"}
-                                            placeholder="••••••••"
-                                            minLength={6}
-                                            maxLength={25}
-                                            name="password"
-                                            value={user.password}
-                                            onChange={onInputChange}
-                                            className="border-0 py-2"
-                                            style={{ 
-                                                backgroundColor: 'transparent',
-                                                boxShadow: 'none',
-                                                fontSize: '0.95rem'
-                                            }}
-                                            disabled={isLoading}
-                                        />
-                                        <InputGroup.Text 
-                                            onClick={togglePassword} 
-                                            className="border-0 bg-transparent pe-3"
-                                            style={{ 
-                                                cursor: 'pointer',
-                                                color: '#6c757d'
-                                            }}
-                                        >
-                                            <i className={`bi bi-${showPassword ? 'eye-slash' : 'eye'}`}></i>
-                                        </InputGroup.Text>
-                                    </InputGroup>
-                                </Form.Group>
+                    {/* Contraseña */}
+                    <Form.Group className="mb-4">
+                        <div className="d-flex justify-content-between align-items-center">
+                            <Form.Label className="small fw-semibold mb-0" style={{ color: COLORS.textoSecundario }}>Contraseña</Form.Label>
+                            <Button variant="link" className="p-0 text-decoration-none small" style={{ fontSize: '0.8rem', color: COLORS.azul }}
+                                onClick={() => showAlert('Contactá a administración para recuperar tu clave', 'warning')}>
+                                ¿Olvidaste tu clave?
+                            </Button>
+                        </div>
+                        <InputGroup className="rounded-3 border mt-1" style={{ borderColor: COLORS.bordes }}>
+                            <Form.Control
+                                type={showPassword ? 'text' : 'password'}
+                                placeholder="••••••••"
+                                name="password"
+                                value={user.password}
+                                onChange={onInputChange}
+                                className="border-0 py-2 shadow-none"
+                                style={{ fontSize: '0.95rem' }}
+                                disabled={isLoading}
+                            />
+                            <InputGroup.Text onClick={togglePassword} className="border-0 bg-transparent pe-3" style={{ cursor: 'pointer' }}>
+                                <i className={`bi bi-${showPassword ? 'eye-slash' : 'eye'}`} style={{ color: COLORS.textoSecundario }}></i>
+                            </InputGroup.Text>
+                        </InputGroup>
+                    </Form.Group>
 
-                                {/* Botón de ingreso */}
-                                <Button 
-                                    variant="primary" 
-                                    type="submit" 
-                                    disabled={isLoading}
-                                    className="w-100 py-2 fw-semibold rounded-3 mt-3"
-                                    style={{ 
-                                        backgroundColor: '#3483FA',
-                                        borderColor: '#3483FA',
-                                        fontSize: '1rem',
-                                        transition: 'all 0.2s ease'
-                                    }}
-                                >
-                                    {isLoading ? (
-                                        <>
-                                            <span className="spinner-border spinner-border-sm me-2" />
-                                            Procesando...
-                                        </>
-                                    ) : (
-                                        <>
-                                            Ingresar
-                                            <i className="bi bi-arrow-right ms-2"></i>
-                                        </>
-                                    )}
-                                </Button>
+                    {/* Botón */}
+                    <Button type="submit" disabled={isLoading} className="w-100 py-2 fw-bold rounded-3"
+                        style={{ backgroundColor: COLORS.azulOscuro, borderColor: COLORS.azulOscuro, color: '#fff', fontSize: '1rem' }}>
+                        {isLoading ? <><Spinner as="span" animation="border" size="sm" className="me-2" />Procesando...</> : <>Ingresar <i className="bi bi-arrow-right ms-1"></i></>}
+                    </Button>
+                </Form>
 
-                                {/* Enlace para crear cuenta */}
-                                <div className="text-center mt-4">
-                                    <span className="text-muted small">¿No tenés cuenta? </span>
-                                    <Button 
-                                        variant="link" 
-                                        className="p-0 text-decoration-none fw-semibold"
-                                        style={{ color: '#3483FA', fontSize: '0.9rem' }}
-                                        onClick={() => navigate('/register')}
-                                    >
-                                        Contacta a administracion
-                                    </Button>
-                                </div>
-                            </Form>
-                        </Card.Body>
-                    </Card>
-                </Col>
-            </Row>
-
-            {/* Estilos para las animaciones y alertas */}
-            <style>{`
-                @keyframes fadeIn {
-                    from {
-                        opacity: 0;
-                        transform: translateY(-10px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                }
-
-                .alert-warning {
-                    background-color: #fef6e6;
-                    color: #856404;
-                    border-left: 4px solid #ffa900;
-                }
-
-                .alert-danger {
-                    background-color: #fde8e8;
-                    color: #721c24;
-                    border-left: 4px solid #dc3545;
-                }
-
-                .alert-success {
-                    background-color: #e6f4ea;
-                    color: #155724;
-                    border-left: 4px solid #28a745;
-                }
-
-                .alert-info {
-                    background-color: #e6f3ff;
-                    color: #004085;
-                    border-left: 4px solid #17a2b8;
-                }
-
-                /* Estilos para los íconos de Bootstrap Icons */
-                .bi {
-                    font-size: 1.1rem;
-                }
-            `}</style>
-        </Container>
+                <div className="text-center mt-4">
+                    <span style={{ color: COLORS.textoSecundario }} className="small">¿No tenés cuenta? </span>
+                    <Button variant="link" className="p-0 text-decoration-none fw-bold" style={{ color: COLORS.azul, fontSize: '0.9rem' }}
+                        onClick={() => showAlert('Contactá a administración para solicitar acceso', 'warning')}>
+                        Contactá a administración
+                    </Button>
+                </div>
+            </Card.Body>
+        </Card>
     );
 };

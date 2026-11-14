@@ -2,15 +2,18 @@
 import React, { useState } from 'react';
 import { Container, Row, Col, Card, Button, Badge } from 'react-bootstrap';
 import { useLocation, Navigate } from 'react-router-dom';
+import { COLORS } from '../Cobranza/Helperss/colors'; // Ajustá la ruta si es necesario
 
 import { NavBarVentas } from './Componentes/NavBarVentas';
-import { FormularioCliente } from './Componentes/FormularioCliente';
+//import { FormularioCliente } from './Componentes/FormularioCliente';
 import { crearCliente } from './Helpers/AltaCliente';
-import { FormularioVenta } from './Componentes/FormularioVenta';
+//import { FormularioVenta } from './Componentes/FormularioVenta';
 import { crearVenta } from './Helpers/AltaVenta';
 
 // 👈 IMPORTAMOS EL NUEVO MODAL (Asegurate de que la ruta sea correcta según tu estructura)
-import { ModalGenerarDocumentos } from '../Ceo/Componentes/ModalGenerarDocumentos'; 
+import { ModalGenerarDocumentos } from '../Ceo/Componentes/ModalGenerarDocumentos';
+import { FormularioCliente } from './Componentesdos/FormularioClienteV2';
+import { FormularioVentaV2 } from './Componentesdos/FormularioVentaV2';
 
 export const Ventas = ({ mostrarNavbar = true }) => {
   const location = useLocation();
@@ -32,9 +35,9 @@ export const Ventas = ({ mostrarNavbar = true }) => {
     return <Navigate to="/" replace />;
   }
 
-  if (usuario.rol !== 'ventas' && usuario.rol !== 'ger_com') {
-    return <Navigate to="/" replace />;
-  }
+if (usuario.rol !== 'ventas' && usuario.rol !== 'ger_com' && usuario.rol !== 'admin') {
+  return <Navigate to="/" replace />;
+}
 
   const showAlert = (message, variant = 'danger') => {
     if (!message) { setAlert({ show: false, message: '', variant: 'danger' }); return; }
@@ -123,7 +126,7 @@ export const Ventas = ({ mostrarNavbar = true }) => {
               <Col lg={10} xl={8}>
                 <div className="mb-4">
                   <h2 className="fw-bold mb-1" style={{ color: '#1a1a1a' }}>
-                    <i className="bi bi-cart-plus me-2" style={{ color: '#3483FA' }}></i>
+                    <i className="bi bi-cart-plus me-2" style={{ color: COLORS.azul }}></i>
                     Nueva Venta
                   </h2>
                   <p className="text-muted small">
@@ -138,7 +141,7 @@ export const Ventas = ({ mostrarNavbar = true }) => {
                 )}
 
                 {pasoActual === 2 && clienteData && (
-                  <FormularioVenta
+                  <FormularioVentaV2
                     clienteData={clienteData}
                     onSubmit={handleVentaSubmit}
                     isLoading={isLoading}
@@ -178,10 +181,10 @@ export const Ventas = ({ mostrarNavbar = true }) => {
 
                       {/* 👉 ÚNICO BOTÓN PARA ABRIR EL MODAL DE GENERACIÓN */}
                       <div className="d-flex flex-column gap-2 align-items-center mb-4">
-                        <Button 
-                          onClick={() => setShowModalGenerar(true)} 
+                        <Button
+                          onClick={() => setShowModalGenerar(true)}
                           className="rounded-3 px-4"
-                          variant="success" 
+                          variant="success"
                           style={{ fontWeight: '500', minWidth: '280px' }}
                         >
                           <i className="bi bi-file-earmark-arrow-down me-2"></i>

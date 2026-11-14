@@ -1,18 +1,32 @@
 
 
-const formatoFecha = (f) => !f ? '-' : new Date(f).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-
-
+// src/Pages/Ceo/Componentes/reportes/PanelClientes.jsx
 import React, { useState, useEffect, useRef } from 'react';
-import { Row, Col, Card, Form, InputGroup, Badge, Button, Spinner, Alert, Modal, Table } from 'react-bootstrap';
+import { Row, Col, Card, Form, InputGroup, Button, Spinner, Alert, Modal, Table } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { listarClientesReporte, obtenerRepVentas } from '../Helpers/ReportesMensuales';
 import { VentaCard } from './CardVentas';
-import { ModalEditarCliente } from './ModalEditarCliente'; // 👈 NUEVO IMPORT
+import { ModalEditarCliente } from './ModalEditarCliente';
+import { COLORS } from '../../Cobranza/Helperss/colors';
 
+// Componente Pill
+const Pill = ({ children, bg, color, border, icon, style = {} }) => (
+  <span style={{
+    display: 'inline-flex', alignItems: 'center', padding: '0.35em 0.7em',
+    fontSize: '0.75rem', fontWeight: '600', borderRadius: '20px',
+    backgroundColor: bg, color: color,
+    border: border ? `1px solid ${border}` : 'none',
+    whiteSpace: 'nowrap', ...style
+  }}>
+    {icon && <i className={`bi bi-${icon} me-1`}></i>}
+    {children}
+  </span>
+);
+
+const formatoFecha = (f) => !f ? '-' : new Date(f).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
 export const PanelClientes = ({ usuario }) => {
-  const navigate = useNavigate(); // 👈 Para pasar al modal
+  const navigate = useNavigate();
   const [clientes, setClientes] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [cargandoMas, setCargandoMas] = useState(false);
@@ -32,15 +46,11 @@ export const PanelClientes = ({ usuario }) => {
   const [filtroActivo, setFiltroActivo] = useState('todas');
   const [filtroSituacion, setFiltroSituacion] = useState('todas');
 
-  // Modal detalle cliente
+  // Modales
   const [showModalCliente, setShowModalCliente] = useState(false);
   const [clienteDetalle, setClienteDetalle] = useState(null);
-
-  // Modal editar cliente
   const [showEditarCliente, setShowEditarCliente] = useState(false);
   const [clienteEditar, setClienteEditar] = useState(null);
-
-  // Modal ventas del cliente
   const [showModalVentas, setShowModalVentas] = useState(false);
   const [clienteVentas, setClienteVentas] = useState(null);
   const [ventasCliente, setVentasCliente] = useState([]);
@@ -76,8 +86,7 @@ export const PanelClientes = ({ usuario }) => {
       setTotalClientes(pag.total || 0);
       setPagina(paginaSolicitada);
 
-      const resumenData = data?.data?.resumen || {};
-      setResumen(resumenData);
+      setResumen(data?.data?.resumen || { totalClientes: 0, totalActivos: 0, totalInactivos: 0 });
     } catch (err) {
       setError(err.message || 'Error al cargar los clientes');
       setClientes([]);
@@ -88,7 +97,6 @@ export const PanelClientes = ({ usuario }) => {
 
   const handleCargarMas = async () => {
     setCargandoMas(true);
-    setError('');
     try {
       const siguientePagina = pagina + 1;
       const data = await listarClientesReporte({
@@ -114,7 +122,6 @@ export const PanelClientes = ({ usuario }) => {
   };
 
   const handleBuscar = () => cargarDatos(1);
-
   const handleLimpiar = () => {
     setBusqueda('');
     setFiltroActivo('todas');
@@ -124,11 +131,7 @@ export const PanelClientes = ({ usuario }) => {
 
   const showAlert = (message, variant = 'danger') => {
     setAlert({ show: true, message, variant });
-    setTimeout(() => {
-      if (alertRef.current) {
-        alertRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }, 100);
+    setTimeout(() => { if (alertRef.current) alertRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 100);
     setTimeout(() => setAlert({ show: false, message: '', variant: 'danger' }), 5000);
   };
 
@@ -137,9 +140,6 @@ export const PanelClientes = ({ usuario }) => {
     setShowModalCliente(true);
   };
 
-  // ==========================================
-  // EDITAR CLIENTE
-  // ==========================================
   const handleEditarCliente = (cliente) => {
     setClienteEditar(cliente);
     setShowEditarCliente(true);
@@ -151,23 +151,14 @@ export const PanelClientes = ({ usuario }) => {
   };
 
   const handleClienteActualizado = () => {
-    // Recargar la lista de clientes
     cargarDatos(pagina);
-    
-    // Si el modal de detalle estaba abierto, actualizarlo o cerrarlo
     if (clienteDetalle) {
-      // Opcional: recargar el detalle del cliente actualizado
-      // Como no hay endpoint para obtener un cliente individual, cerramos el modal
       setShowModalCliente(false);
       setClienteDetalle(null);
     }
-    
     showAlert('Cliente actualizado correctamente', 'success');
   };
 
-  // ==========================================
-  // VENTAS DEL CLIENTE
-  // ==========================================
   const cargarVentasCliente = async (cliente, paginaSolicitada = 1) => {
     if (paginaSolicitada === 1) {
       setLoadingVentas(true);
@@ -178,18 +169,11 @@ export const PanelClientes = ({ usuario }) => {
     }
 
     try {
-      const data = await obtenerRepVentas({
-        dni: cliente.dni,
-        pagina: paginaSolicitada,
-        limite: 10
-      });
-
+      const data = await obtenerRepVentas({ dni: cliente.dni, pagina: paginaSolicitada, limite: 10 });
       const nuevas = data?.data?.ventas || [];
       const pag = data?.data?.paginacion || {};
 
-      setVentasCliente(prev =>
-        paginaSolicitada === 1 ? nuevas : [...prev, ...nuevas]
-      );
+      setVentasCliente(prev => paginaSolicitada === 1 ? nuevas : [...prev, ...nuevas]);
       setHayMasVentas(pag.hayMas || false);
       setTotalVentas(pag.total || 0);
       setPaginaVentas(paginaSolicitada);
@@ -227,102 +211,92 @@ export const PanelClientes = ({ usuario }) => {
     cargarVentasCliente(clienteVentas, 1);
   };
 
-  const badgeSituacion = (situacion) => {
+  // Configuración de Pills para Situación Crediticia
+  const pillSituacion = (situacion) => {
     const config = {
-      1: { bg: 'success', label: 'Excelente', icon: 'bi-star-fill' },
-      2: { bg: 'primary', label: 'Buena', icon: 'bi-hand-thumbs-up' },
-      3: { bg: 'warning', label: 'Regular', icon: 'bi-exclamation-circle', text: 'dark' },
-      4: { bg: 'danger', label: 'Mala', icon: 'bi-x-circle' },
-      5: { bg: 'dark', label: 'Crítica', icon: 'bi-shield-x' }
+      1: { bg: COLORS.verdeSuave, color: COLORS.verde, label: 'Excelente', icon: 'star-fill' },
+      2: { bg: COLORS.azulSuave, color: COLORS.azul, label: 'Buena', icon: 'hand-thumbs-up' },
+      3: { bg: COLORS.ambarSuave, color: COLORS.ambar, label: 'Regular', icon: 'exclamation-circle' },
+      4: { bg: COLORS.rojoSuave, color: COLORS.rojo, label: 'Mala', icon: 'x-circle' },
+      5: { bg: COLORS.azulOscuro, color: '#fff', label: 'Crítica', icon: 'shield-x' }
     };
-    const c = config[situacion] || { bg: 'secondary', label: 'Sin calificar', icon: 'bi-question-circle' };
-    return (
-      <Badge bg={c.bg} text={c.text || 'white'}>
-        <i className={`bi ${c.icon} me-1`}></i>
-        {c.label}
-      </Badge>
-    );
+    const c = config[situacion] || { bg: COLORS.bgGeneral, color: COLORS.textoSecundario, label: 'Sin calificar', icon: 'question-circle' };
+    return <Pill bg={c.bg} color={c.color} icon={c.icon}>{c.label}</Pill>;
   };
 
-  if (isLoading) {
-    return (
-      <div className="text-center py-5">
-        <Spinner animation="border" style={{ color: '#3483FA' }} />
-        <p className="text-muted mt-3">Cargando clientes...</p>
-      </div>
-    );
-  }
+  if (isLoading) return (
+    <div className="text-center py-5">
+      <Spinner animation="border" style={{ color: COLORS.azul }} />
+      <p className="mt-3" style={{ color: COLORS.textoSecundario }}>Cargando clientes...</p>
+    </div>
+  );
 
-  if (error && clientes.length === 0) {
-    return (
-      <Alert variant="danger" className="shadow-sm border-0" style={{ borderRadius: '8px' }}>
-        <i className="bi bi-exclamation-triangle me-2"></i>{error}
-        <button onClick={() => cargarDatos(1)} className="btn btn-link btn-sm ms-3" style={{ color: '#dc3545', textDecoration: 'underline' }}>
-          Reintentar
-        </button>
-      </Alert>
-    );
-  }
+  if (error && clientes.length === 0) return (
+    <Alert variant="danger" className="shadow-sm border-0" style={{ borderRadius: '12px' }}>
+      <i className="bi bi-exclamation-triangle me-2"></i>{error}
+      <Button onClick={() => cargarDatos(1)} variant="link" className="ms-3" style={{ color: COLORS.rojo, textDecoration: 'underline' }}>
+        Reintentar
+      </Button>
+    </Alert>
+  );
 
   return (
     <div>
-      {/* Alert global */}
       {alert.show && (
-        <Alert
-          ref={alertRef}
-          variant={alert.variant}
+        <Alert ref={alertRef} variant={alert.variant} dismissible onClose={() => setAlert({ show: false, message: '', variant: 'danger' })}
           className="shadow-sm border-0 mb-3"
-          style={{ borderRadius: '8px' }}
-          dismissible
-          onClose={() => setAlert({ show: false, message: '', variant: 'danger' })}
-        >
+          style={{
+            borderRadius: '12px',
+            backgroundColor: alert.variant === 'success' ? COLORS.verdeSuave : alert.variant === 'warning' ? COLORS.ambarSuave : COLORS.rojoSuave,
+            color: alert.variant === 'success' ? COLORS.verde : alert.variant === 'warning' ? COLORS.ambar : COLORS.rojo
+          }}>
           <i className={`bi bi-${alert.variant === 'success' ? 'check-circle' : 'info-circle'} me-2`}></i>
           {alert.message}
         </Alert>
       )}
 
-      {/* Cards de Resumen */}
+      {/* KPIs */}
       <Row className="g-3 mb-4">
         <Col lg={4} md={6}>
-          <Card className="shadow-sm border-0 h-100" style={{ borderRadius: '12px', borderLeft: '4px solid #3483FA' }}>
+          <Card className="border-0 shadow-sm h-100" style={{ borderRadius: '12px', borderLeft: `4px solid ${COLORS.azul}` }}>
             <Card.Body>
               <div className="d-flex justify-content-between align-items-start">
                 <div>
-                  <small className="text-muted d-block mb-1">TOTAL CLIENTES</small>
-                  <h3 className="fw-bold mb-0" style={{ color: '#3483FA' }}>{resumen.totalClientes}</h3>
+                  <small style={{ color: COLORS.textoSecundario }} className="d-block mb-1">TOTAL CLIENTES</small>
+                  <h3 className="fw-bold mb-0" style={{ color: COLORS.azul }}>{resumen.totalClientes}</h3>
                 </div>
-                <div className="rounded-circle p-2" style={{ backgroundColor: '#e8f0fe' }}>
-                  <i className="bi bi-people" style={{ color: '#3483FA', fontSize: '1.2rem' }}></i>
+                <div className="rounded-circle p-2" style={{ backgroundColor: COLORS.azulSuave }}>
+                  <i className="bi bi-people" style={{ color: COLORS.azul, fontSize: '1.2rem' }}></i>
                 </div>
               </div>
             </Card.Body>
           </Card>
         </Col>
         <Col lg={4} md={6}>
-          <Card className="shadow-sm border-0 h-100" style={{ borderRadius: '12px', borderLeft: '4px solid #00A650' }}>
+          <Card className="border-0 shadow-sm h-100" style={{ borderRadius: '12px', borderLeft: `4px solid ${COLORS.verde}` }}>
             <Card.Body>
               <div className="d-flex justify-content-between align-items-start">
                 <div>
-                  <small className="text-muted d-block mb-1">ACTIVOS</small>
-                  <h3 className="fw-bold mb-0" style={{ color: '#00A650' }}>{resumen.totalActivos}</h3>
+                  <small style={{ color: COLORS.textoSecundario }} className="d-block mb-1">ACTIVOS</small>
+                  <h3 className="fw-bold mb-0" style={{ color: COLORS.verde }}>{resumen.totalActivos}</h3>
                 </div>
-                <div className="rounded-circle p-2" style={{ backgroundColor: '#e6f4ea' }}>
-                  <i className="bi bi-person-check" style={{ color: '#00A650', fontSize: '1.2rem' }}></i>
+                <div className="rounded-circle p-2" style={{ backgroundColor: COLORS.verdeSuave }}>
+                  <i className="bi bi-person-check" style={{ color: COLORS.verde, fontSize: '1.2rem' }}></i>
                 </div>
               </div>
             </Card.Body>
           </Card>
         </Col>
         <Col lg={4} md={12}>
-          <Card className="shadow-sm border-0 h-100" style={{ borderRadius: '12px', borderLeft: '4px solid #6C757D' }}>
+          <Card className="border-0 shadow-sm h-100" style={{ borderRadius: '12px', borderLeft: `4px solid ${COLORS.textoSecundario}` }}>
             <Card.Body>
               <div className="d-flex justify-content-between align-items-start">
                 <div>
-                  <small className="text-muted d-block mb-1">INACTIVOS</small>
-                  <h3 className="fw-bold mb-0" style={{ color: '#6C757D' }}>{resumen.totalInactivos}</h3>
+                  <small style={{ color: COLORS.textoSecundario }} className="d-block mb-1">INACTIVOS</small>
+                  <h3 className="fw-bold mb-0" style={{ color: COLORS.textoSecundario }}>{resumen.totalInactivos}</h3>
                 </div>
-                <div className="rounded-circle p-2" style={{ backgroundColor: '#f8f9fa' }}>
-                  <i className="bi bi-person-slash" style={{ color: '#6C757D', fontSize: '1.2rem' }}></i>
+                <div className="rounded-circle p-2" style={{ backgroundColor: COLORS.bgGeneral }}>
+                  <i className="bi bi-person-slash" style={{ color: COLORS.textoSecundario, fontSize: '1.2rem' }}></i>
                 </div>
               </div>
             </Card.Body>
@@ -331,35 +305,34 @@ export const PanelClientes = ({ usuario }) => {
       </Row>
 
       {/* Filtros */}
-      <Card className="shadow-sm border-0 mb-4" style={{ borderRadius: '12px' }}>
+      <Card className="border-0 shadow-sm mb-4" style={{ borderRadius: '12px' }}>
         <Card.Body className="p-3">
-          <Row className="g-3 align-items-end">
+          <Row className="g-2 align-items-end">
             <Col lg={4} md={6}>
               <InputGroup>
-                <InputGroup.Text style={{ backgroundColor: '#f8f9fa', border: '1px solid #e5e5e5' }}>
-                  <i className="bi bi-search" style={{ color: '#999' }}></i>
+                <InputGroup.Text style={{ backgroundColor: COLORS.bgGeneral, borderColor: COLORS.bordes }}>
+                  <i className="bi bi-search" style={{ color: COLORS.textoSecundario }}></i>
                 </InputGroup.Text>
                 <Form.Control
                   placeholder="Buscar por nombre, apellido o DNI..."
                   value={busqueda}
                   onChange={(e) => setBusqueda(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleBuscar()}
-                  style={{ border: '1px solid #e5e5e5', fontSize: '0.9rem', padding: '10px 12px' }}
+                  style={{ borderColor: COLORS.bordes }}
+                  className="rounded-end-3"
                 />
               </InputGroup>
             </Col>
             <Col lg={2} md={6}>
-              <Form.Select value={filtroActivo} onChange={(e) => setFiltroActivo(e.target.value)}
-                style={{ border: '1px solid #e5e5e5', borderRadius: '6px', fontSize: '0.9rem', padding: '10px 12px' }}>
-                <option value="todas">Todos</option>
+              <Form.Select value={filtroActivo} onChange={(e) => setFiltroActivo(e.target.value)} className="rounded-3" style={{ borderColor: COLORS.bordes }}>
+                <option value="todas">Estado: Todos</option>
                 <option value="true">Activos</option>
                 <option value="false">Inactivos</option>
               </Form.Select>
             </Col>
             <Col lg={2} md={6}>
-              <Form.Select value={filtroSituacion} onChange={(e) => setFiltroSituacion(e.target.value)}
-                style={{ border: '1px solid #e5e5e5', borderRadius: '6px', fontSize: '0.9rem', padding: '10px 12px' }}>
-                <option value="todas">Todas las situaciones</option>
+              <Form.Select value={filtroSituacion} onChange={(e) => setFiltroSituacion(e.target.value)} className="rounded-3" style={{ borderColor: COLORS.bordes }}>
+                <option value="todas">Situación: Todas</option>
                 <option value="1">Excelente</option>
                 <option value="2">Buena</option>
                 <option value="3">Regular</option>
@@ -368,11 +341,11 @@ export const PanelClientes = ({ usuario }) => {
               </Form.Select>
             </Col>
             <Col lg={4} md={6} className="d-flex justify-content-end gap-2">
-              <small className="text-muted align-self-center">{clientes.length} clientes</small>
-              <Button onClick={handleBuscar} variant="outline-primary" size="sm" className="rounded-3">
+              <small style={{ color: COLORS.textoSecundario }} className="align-self-center">{clientes.length} clientes</small>
+              <Button onClick={handleBuscar} variant="outline-primary" size="sm" className="rounded-3" style={{ color: COLORS.azul, borderColor: COLORS.azul }}>
                 <i className="bi bi-search me-1"></i>Buscar
               </Button>
-              <Button onClick={handleLimpiar} variant="outline-secondary" size="sm" className="rounded-3">
+              <Button onClick={handleLimpiar} variant="outline-secondary" size="sm" className="rounded-3" style={{ borderColor: COLORS.bordes, color: COLORS.textoSecundario }}>
                 <i className="bi bi-eraser me-1"></i>Limpiar
               </Button>
             </Col>
@@ -382,66 +355,63 @@ export const PanelClientes = ({ usuario }) => {
 
       {/* Tabla de Clientes */}
       {clientes.length === 0 ? (
-        <div className="text-center py-5">
-          <i className="bi bi-people" style={{ fontSize: '3rem', color: '#ccc' }}></i>
-          <p className="text-muted mt-3">No hay clientes con los filtros aplicados</p>
+        <div className="text-center py-5" style={{ color: COLORS.textoSecundario }}>
+          <i className="bi bi-people" style={{ fontSize: '3rem' }}></i>
+          <p className="mt-3">No hay clientes con los filtros aplicados</p>
         </div>
       ) : (
-        <Card className="shadow-sm border-0" style={{ borderRadius: '12px' }}>
+        <Card className="border-0 shadow-sm" style={{ borderRadius: '12px' }}>
           <Card.Body className="p-0">
             <div className="table-responsive">
               <Table hover className="align-middle mb-0" style={{ fontSize: '0.85rem' }}>
-                <thead className="bg-light">
+                <thead style={{ backgroundColor: COLORS.bgGeneral }}>
                   <tr>
-                    <th>Cliente</th>
-                    <th>DNI</th>
-                    <th>Contacto</th>
-                    <th>Situación Crediticia</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
+                    {['Cliente', 'DNI', 'Contacto', 'Situación Crediticia', 'Estado', 'Acciones'].map(h => (
+                      <th key={h} style={{ color: COLORS.textoSecundario, fontWeight: '600', padding: '12px' }}>{h}</th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
                   {clientes.map(cliente => (
-                    <tr key={cliente._id}>
-                      <td>
+                    <tr key={cliente._id} style={{ borderBottom: `1px solid ${COLORS.bordes}` }}>
+                      <td style={{ padding: '12px' }}>
                         <div className="d-flex align-items-center">
-                          <div
-                            className="d-flex align-items-center justify-content-center rounded-circle me-2"
+                          <div className="d-flex align-items-center justify-content-center rounded-circle me-2"
                             style={{
                               width: '36px', height: '36px',
-                              backgroundColor: cliente.activo ? '#e6f4ea' : '#f8f9fa',
-                              color: cliente.activo ? '#00A650' : '#6C757D',
+                              backgroundColor: cliente.activo ? COLORS.verdeSuave : COLORS.bgGeneral,
+                              color: cliente.activo ? COLORS.verde : COLORS.textoSecundario,
                               fontWeight: 'bold', fontSize: '0.85rem'
-                            }}
-                          >
+                            }}>
                             {cliente.nombre?.charAt(0)}{cliente.apellido?.charAt(0)}
                           </div>
                           <div>
-                            <div style={{ fontWeight: '500', color: '#333' }}>{cliente.nombreCompleto}</div>
-                            <small className="text-muted">{cliente.email || 'Sin email'}</small>
+                            <div style={{ fontWeight: '600', color: COLORS.textoPrincipal }}>{cliente.nombreCompleto}</div>
+                            <small style={{ color: COLORS.textoSecundario }}>{cliente.email || 'Sin email'}</small>
                           </div>
                         </div>
                       </td>
-                      <td style={{ color: '#666' }}>{cliente.dni || '-'}</td>
+                      <td style={{ color: COLORS.textoSecundario }}>{cliente.dni || '-'}</td>
                       <td>
-                        <div style={{ color: '#666' }}>{cliente.telefono || '-'}</div>
-                        {cliente.telefono2 && <small className="text-muted">{cliente.telefono2}</small>}
+                        <div style={{ color: COLORS.textoPrincipal }}>{cliente.telefono || '-'}</div>
+                        {cliente.telefono2 && <small style={{ color: COLORS.textoSecundario }}>{cliente.telefono2}</small>}
                       </td>
-                      <td>{badgeSituacion(cliente.situacionCrediticia)}</td>
+                      <td>{pillSituacion(cliente.situacionCrediticia)}</td>
                       <td>
-                        <Badge bg={cliente.activo ? 'success' : 'secondary'}>
+                        <Pill bg={cliente.activo ? COLORS.verdeSuave : COLORS.bgGeneral} color={cliente.activo ? COLORS.verde : COLORS.textoSecundario}>
                           {cliente.activo ? 'Activo' : 'Inactivo'}
-                        </Badge>
+                        </Pill>
                       </td>
                       <td>
                         <div className="d-flex gap-1">
                           <Button variant="outline-primary" size="sm" className="rounded-3"
-                            onClick={() => handleVerCliente(cliente)} title="Ver detalles">
+                            onClick={() => handleVerCliente(cliente)} title="Ver detalles"
+                            style={{ borderColor: COLORS.azul, color: COLORS.azul }}>
                             <i className="bi bi-eye"></i>
                           </Button>
                           <Button variant="outline-success" size="sm" className="rounded-3"
-                            onClick={() => handleVerVentas(cliente)} title="Ver ventas del cliente">
+                            onClick={() => handleVerVentas(cliente)} title="Ver ventas del cliente"
+                            style={{ borderColor: COLORS.verde, color: COLORS.verde }}>
                             <i className="bi bi-file-earmark-bar-graph"></i>
                           </Button>
                         </div>
@@ -455,137 +425,123 @@ export const PanelClientes = ({ usuario }) => {
         </Card>
       )}
 
-      {/* Botón Cargar más */}
       {hayMas && (
         <div className="text-center mt-3">
-          <Button onClick={handleCargarMas} variant="outline-primary" className="rounded-3 px-4" disabled={cargandoMas}>
-            {cargandoMas ? (
-              <><Spinner size="sm" className="me-2" />Cargando...</>
-            ) : (
-              <><i className="bi bi-arrow-down me-2"></i>Cargar más ({restantes} restantes)</>
-            )}
+          <Button onClick={handleCargarMas} variant="outline-primary" className="rounded-3 px-4" disabled={cargandoMas}
+            style={{ borderColor: COLORS.azul, color: COLORS.azul }}>
+            {cargandoMas ? <><Spinner size="sm" className="me-2" />Cargando...</> : <><i className="bi bi-arrow-down me-2"></i>Cargar más ({restantes} restantes)</>}
           </Button>
         </div>
       )}
 
-      {/* Modal Detalle Cliente */}
+      {/* MODAL DETALLE CLIENTE */}
       <Modal show={showModalCliente} onHide={() => setShowModalCliente(false)} size="lg" centered>
-        <Modal.Header closeButton className="border-0 pb-0">
-          <Modal.Title className="fw-bold" style={{ color: '#1a1a1a' }}>
-            <i className="bi bi-person me-2" style={{ color: '#3483FA' }}></i>
+        <Modal.Header closeButton className="border-0 pb-0 pt-4 px-4">
+          <Modal.Title className="fw-bold" style={{ color: COLORS.textoPrincipal }}>
+            <i className="bi bi-person me-2" style={{ color: COLORS.azul }}></i>
             Detalle del Cliente
           </Modal.Title>
         </Modal.Header>
-        <Modal.Body>
+        <Modal.Body className="px-4 pt-3">
           {clienteDetalle && (
             <>
               <div className="text-center mb-4">
-                <div
-                  className="d-flex align-items-center justify-content-center rounded-circle mx-auto mb-3"
+                <div className="d-flex align-items-center justify-content-center rounded-circle mx-auto mb-3"
                   style={{
                     width: '80px', height: '80px',
-                    backgroundColor: clienteDetalle.activo ? '#e6f4ea' : '#f8f9fa',
-                    color: clienteDetalle.activo ? '#00A650' : '#6C757D',
+                    backgroundColor: clienteDetalle.activo ? COLORS.verdeSuave : COLORS.bgGeneral,
+                    color: clienteDetalle.activo ? COLORS.verde : COLORS.textoSecundario,
                     fontSize: '2rem', fontWeight: 'bold'
-                  }}
-                >
+                  }}>
                   {clienteDetalle.nombre?.charAt(0)}{clienteDetalle.apellido?.charAt(0)}
                 </div>
-                <h4 className="fw-bold mb-1" style={{ color: '#1a1a1a' }}>
+                <h4 className="fw-bold mb-1" style={{ color: COLORS.textoPrincipal }}>
                   {clienteDetalle.nombreCompleto}
                 </h4>
                 <div className="d-flex justify-content-center gap-2">
-                  <Badge bg={clienteDetalle.activo ? 'success' : 'secondary'}>
+                  <Pill bg={clienteDetalle.activo ? COLORS.verdeSuave : COLORS.bgGeneral} color={clienteDetalle.activo ? COLORS.verde : COLORS.textoSecundario}>
                     {clienteDetalle.activo ? 'Activo' : 'Inactivo'}
-                  </Badge>
-                  {badgeSituacion(clienteDetalle.situacionCrediticia)}
+                  </Pill>
+                  {pillSituacion(clienteDetalle.situacionCrediticia)}
                 </div>
               </div>
 
-              <div className="border rounded-3 p-3 mb-3" style={{ backgroundColor: '#f8f9fa' }}>
-                <h6 className="fw-bold mb-3" style={{ fontSize: '0.85rem' }}>
+              <div className="rounded-3 p-3 mb-3" style={{ backgroundColor: COLORS.bgGeneral, border: `1px solid ${COLORS.bordes}` }}>
+                <h6 className="fw-bold mb-3" style={{ fontSize: '0.85rem', color: COLORS.azul }}>
                   <i className="bi bi-info-circle me-2"></i>Información Personal
                 </h6>
                 <Row className="g-3">
                   <Col md={4}>
-                    <small className="text-muted d-block">DNI</small>
-                    <strong style={{ color: '#333' }}>{clienteDetalle.dni || 'N/A'}</strong>
+                    <small style={{ color: COLORS.textoSecundario }} className="d-block">DNI</small>
+                    <strong style={{ color: COLORS.textoPrincipal }}>{clienteDetalle.dni || 'N/A'}</strong>
                   </Col>
                   <Col md={4}>
-                    <small className="text-muted d-block">CUIL</small>
-                    <span style={{ color: '#333' }}>{clienteDetalle.cuil || 'N/A'}</span>
+                    <small style={{ color: COLORS.textoSecundario }} className="d-block">CUIL</small>
+                    <span style={{ color: COLORS.textoPrincipal }}>{clienteDetalle.cuil || 'N/A'}</span>
                   </Col>
                   <Col md={4}>
-                    <small className="text-muted d-block">Dirección</small>
-                    <span style={{ color: '#333' }}>{clienteDetalle.direccion || 'N/A'}</span>
+                    <small style={{ color: COLORS.textoSecundario }} className="d-block">Dirección</small>
+                    <span style={{ color: COLORS.textoPrincipal }}>{clienteDetalle.direccion || 'N/A'}</span>
                   </Col>
                 </Row>
               </div>
 
-              <div className="border rounded-3 p-3" style={{ backgroundColor: '#f8f9fa' }}>
-                <h6 className="fw-bold mb-3" style={{ fontSize: '0.85rem' }}>
+              <div className="rounded-3 p-3" style={{ backgroundColor: COLORS.bgGeneral, border: `1px solid ${COLORS.bordes}` }}>
+                <h6 className="fw-bold mb-3" style={{ fontSize: '0.85rem', color: COLORS.azul }}>
                   <i className="bi bi-telephone me-2"></i>Contacto
                 </h6>
                 <Row className="g-3">
                   <Col md={4}>
-                    <small className="text-muted d-block">Teléfono</small>
-                    <span style={{ color: '#333' }}>{clienteDetalle.telefono || 'N/A'}</span>
+                    <small style={{ color: COLORS.textoSecundario }} className="d-block">Teléfono</small>
+                    <span style={{ color: COLORS.textoPrincipal }}>{clienteDetalle.telefono || 'N/A'}</span>
                   </Col>
                   <Col md={4}>
-                    <small className="text-muted d-block">Teléfono 2</small>
-                    <span style={{ color: '#333' }}>{clienteDetalle.telefono2 || 'N/A'}</span>
+                    <small style={{ color: COLORS.textoSecundario }} className="d-block">Teléfono 2</small>
+                    <span style={{ color: COLORS.textoPrincipal }}>{clienteDetalle.telefono2 || 'N/A'}</span>
                   </Col>
                   <Col md={4}>
-                    <small className="text-muted d-block">Email</small>
-                    <span style={{ color: '#333' }}>{clienteDetalle.email || 'N/A'}</span>
+                    <small style={{ color: COLORS.textoSecundario }} className="d-block">Email</small>
+                    <span style={{ color: COLORS.textoPrincipal }}>{clienteDetalle.email || 'N/A'}</span>
                   </Col>
                 </Row>
               </div>
             </>
           )}
         </Modal.Body>
-        <Modal.Footer className="border-0 pt-0 d-flex justify-content-between">
-          <Button
-            variant="outline-warning"
-            className="rounded-3"
-            onClick={() => handleEditarCliente(clienteDetalle)}
-            title="Editar datos del cliente"
-          >
+        <Modal.Footer className="border-0 pt-0 px-4 pb-4 d-flex justify-content-between">
+          <Button variant="outline-warning" className="rounded-3" onClick={() => handleEditarCliente(clienteDetalle)}
+            title="Editar datos del cliente" style={{ borderColor: COLORS.ambar, color: COLORS.ambar }}>
             <i className="bi bi-pencil-square me-1"></i>Editar
           </Button>
-          <Button variant="secondary" onClick={() => setShowModalCliente(false)} className="rounded-3">
+          <Button variant="outline-secondary" onClick={() => setShowModalCliente(false)} className="rounded-3"
+            style={{ borderColor: COLORS.bordes, color: COLORS.textoSecundario }}>
             Cerrar
           </Button>
         </Modal.Footer>
       </Modal>
 
-      {/* Modal Ventas del Cliente */}
+      {/* MODAL VENTAS DEL CLIENTE */}
       <Modal show={showModalVentas} onHide={handleCerrarModalVentas} size="xl" centered scrollable>
-        <Modal.Header closeButton className="border-0 pb-0">
-          <Modal.Title className="fw-bold" style={{ color: '#1a1a1a' }}>
-            <i className="bi bi-file-earmark-bar-graph me-2" style={{ color: '#3483FA' }}></i>
+        <Modal.Header closeButton className="border-0 pb-0 pt-4 px-4">
+          <Modal.Title className="fw-bold" style={{ color: COLORS.textoPrincipal }}>
+            <i className="bi bi-file-earmark-bar-graph me-2" style={{ color: COLORS.azul }}></i>
             Ventas del Cliente
           </Modal.Title>
         </Modal.Header>
-        <Modal.Body>
+        <Modal.Body className="px-4 pt-3">
           {clienteVentas && (
-            <div
-              className="d-flex align-items-center gap-3 p-3 mb-3 rounded-3"
-              style={{ backgroundColor: '#f8f9fa' }}
-            >
-              <div
-                className="d-flex align-items-center justify-content-center rounded-circle"
+            <div className="d-flex align-items-center gap-3 p-3 mb-3 rounded-3" style={{ backgroundColor: COLORS.bgGeneral, border: `1px solid ${COLORS.bordes}` }}>
+              <div className="d-flex align-items-center justify-content-center rounded-circle"
                 style={{
                   width: '48px', height: '48px',
-                  backgroundColor: '#e8f0fe', color: '#3483FA',
+                  backgroundColor: COLORS.azulSuave, color: COLORS.azul,
                   fontWeight: 'bold', fontSize: '1rem'
-                }}
-              >
+                }}>
                 {clienteVentas.nombre?.charAt(0)}{clienteVentas.apellido?.charAt(0)}
               </div>
               <div className="flex-grow-1">
-                <div className="fw-bold" style={{ color: '#1a1a1a' }}>{clienteVentas.nombreCompleto}</div>
-                <small className="text-muted">
+                <div className="fw-bold" style={{ color: COLORS.textoPrincipal }}>{clienteVentas.nombreCompleto}</div>
+                <small style={{ color: COLORS.textoSecundario }}>
                   DNI: {clienteVentas.dni} · {totalVentas} venta{totalVentas !== 1 ? 's' : ''}
                 </small>
               </div>
@@ -594,71 +550,53 @@ export const PanelClientes = ({ usuario }) => {
 
           {loadingVentas && (
             <div className="text-center py-5">
-              <Spinner animation="border" style={{ color: '#3483FA' }} />
-              <p className="text-muted mt-3">Cargando ventas...</p>
+              <Spinner animation="border" style={{ color: COLORS.azul }} />
+              <p className="mt-3" style={{ color: COLORS.textoSecundario }}>Cargando ventas...</p>
             </div>
           )}
 
           {!loadingVentas && errorVentas && (
-            <Alert variant="danger" className="border-0" style={{ borderRadius: '8px' }}>
+            <Alert variant="danger" className="border-0" style={{ borderRadius: '12px', backgroundColor: COLORS.rojoSuave, color: COLORS.rojo }}>
               <i className="bi bi-exclamation-triangle me-2"></i>{errorVentas}
-              <button
-                onClick={() => cargarVentasCliente(clienteVentas, 1)}
-                className="btn btn-link btn-sm ms-3"
-                style={{ color: '#dc3545', textDecoration: 'underline' }}
-              >
+              <Button onClick={() => cargarVentasCliente(clienteVentas, 1)} variant="link" className="ms-3" style={{ color: COLORS.rojo, textDecoration: 'underline' }}>
                 Reintentar
-              </button>
+              </Button>
             </Alert>
           )}
 
           {!loadingVentas && !errorVentas && ventasCliente.length === 0 && (
-            <div className="text-center py-5">
-              <i className="bi bi-inbox" style={{ fontSize: '3rem', color: '#ccc' }}></i>
-              <p className="text-muted mt-3">Este cliente no tiene ventas registradas</p>
+            <div className="text-center py-5" style={{ color: COLORS.textoSecundario }}>
+              <i className="bi bi-inbox" style={{ fontSize: '3rem' }}></i>
+              <p className="mt-3">Este cliente no tiene ventas registradas</p>
             </div>
           )}
 
           {!loadingVentas && !errorVentas && ventasCliente.length > 0 && (
             <>
               {ventasCliente.map(v => (
-                <VentaCard
-                  key={v._id}
-                  venta={v}
-                  usuario={usuario}
-                  onRefresh={handleRefreshVentas}
-                />
+                <VentaCard key={v._id} venta={v} usuario={usuario} onRefresh={handleRefreshVentas} />
               ))}
 
               {hayMasVentas && (
                 <div className="text-center mt-3">
-                  <Button
-                    onClick={handleCargarMasVentas}
-                    variant="outline-primary"
-                    className="rounded-3 px-4"
-                    disabled={cargandoMasVentas}
-                  >
-                    {cargandoMasVentas ? (
-                      <><Spinner size="sm" className="me-2" />Cargando...</>
-                    ) : (
-                      <><i className="bi bi-arrow-down me-2"></i>Cargar más ventas</>
-                    )}
+                  <Button onClick={handleCargarMasVentas} variant="outline-primary" className="rounded-3 px-4" disabled={cargandoMasVentas}
+                    style={{ borderColor: COLORS.azul, color: COLORS.azul }}>
+                    {cargandoMasVentas ? <><Spinner size="sm" className="me-2" />Cargando...</> : <><i className="bi bi-arrow-down me-2"></i>Cargar más ventas</>}
                   </Button>
                 </div>
               )}
             </>
           )}
         </Modal.Body>
-        <Modal.Footer className="border-0 pt-0">
-          <Button variant="secondary" onClick={handleCerrarModalVentas} className="rounded-3">
+        <Modal.Footer className="border-0 pt-0 px-4 pb-4">
+          <Button variant="outline-secondary" onClick={handleCerrarModalVentas} className="rounded-3"
+            style={{ borderColor: COLORS.bordes, color: COLORS.textoSecundario }}>
             Cerrar
           </Button>
         </Modal.Footer>
       </Modal>
 
-      {/* ==========================================
-          MODAL EDITAR CLIENTE
-          ========================================== */}
+      {/* MODAL EDITAR CLIENTE */}
       <ModalEditarCliente
         show={showEditarCliente}
         onHide={handleCerrarEditarCliente}

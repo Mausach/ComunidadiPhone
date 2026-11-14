@@ -11,9 +11,11 @@ import { Cobranza } from '../Cobranza/Cobranza';
 import { EquiposCanjeados } from '../Ceo/Componentes/EquiposCanjeados';
 import { StockEquipos } from '../Ceo/Componentes/StockEquipos';
 import { VentasContado } from '../Ceo/Componentes/VentasContado';
-import { EquiposUnificados } from '../Ceo/Componentes/StockEquiposUnicos';
+//import { EquiposUnificados } from '../Ceo/Componentes/StockEquiposUnicos';
 import { ReportesNuevo } from '../Ceo/Componentes/ReportesNuevo';
 import { PanelVentas } from '../Ceo/Componentes/PanelVentas';
+import { CobranzaV2 } from '../Cobranza/CobranzaV2';
+import { EquiposUnificados } from './Componentedos/EquiposUnificadosV2';
 
 
 const DashboardGerCom = ({ usuario }) => (
@@ -47,7 +49,7 @@ export const Ger_Comercial = () => {
       case 'ventas':
         return <Ventas mostrarNavbar={false} />;
       case 'cobranza':
-        return <Cobranza mostrarNavbar={false} />;
+        return <CobranzaV2 mostrarNavbar={false} />;
       case 'reportes':
         return <ReportesNuevo />;
       case 'stock':

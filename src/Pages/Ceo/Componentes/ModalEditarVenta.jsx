@@ -1,8 +1,8 @@
 // src/Pages/Ceo/Componentes/ModalEditarVenta.jsx
 import React, { useState, useEffect } from 'react';
-import { Modal, Row, Col, Button, Form, Tab, Nav, Spinner, Alert } from 'react-bootstrap';
+import { Modal, Row, Col, Button, Form, Tab, Nav, Spinner, Alert, Table } from 'react-bootstrap';
 import { COLORS } from '../../Cobranza/Helperss/colors';
-import { editarVenta } from '../Helpers/EditarVenta';
+import { editarVenta, agregarCuotasVenta } from '../Helpers/EditarVenta';
 
 // Componente Pill
 const Pill = ({ children, bg, color, border, icon, style = {} }) => (
@@ -19,7 +19,6 @@ const Pill = ({ children, bg, color, border, icon, style = {} }) => (
 );
 
 const formatoFecha = (f) => !f ? '' : new Date(f).toISOString().split('T')[0];
-
 const LOCALIDADES = ['santiago capital', 'la banda', 'añatuya', 'monte quemado'];
 
 export const ModalEditarVenta = ({ show, onHide, venta, usuario, onRefresh }) => {
@@ -27,6 +26,7 @@ export const ModalEditarVenta = ({ show, onHide, venta, usuario, onRefresh }) =>
   const [loading, setLoading] = useState(false);
   const [alert, setAlert] = useState({ show: false, message: '', variant: 'danger' });
 
+  // Estados del formulario
   const [formData, setFormData] = useState({
     localidad: '',
     fechaRealizada: '',
@@ -38,6 +38,10 @@ export const ModalEditarVenta = ({ show, onHide, venta, usuario, onRefresh }) =>
     pagos: [],
     descuentos: [],
   });
+
+  // Estados para Cuotas
+  const [cuotasEditadas, setCuotasEditadas] = useState([]);
+  const [cuotasNuevas, setCuotasNuevas] = useState([]);
 
   useEffect(() => {
     if (show && venta) {
@@ -52,6 +56,18 @@ export const ModalEditarVenta = ({ show, onHide, venta, usuario, onRefresh }) =>
         pagos: venta.pagos ? venta.pagos.map(p => ({ monto: p.monto, metodo: p.metodo, notas: p.notas, fecha: p.fecha })) : [],
         descuentos: venta.descuentos ? venta.descuentos.map(d => ({ monto: d.monto, descripcion: d.descripcion })) : [],
       });
+
+      if (venta.cuotas && venta.cuotas.length > 0) {
+        setCuotasEditadas(venta.cuotas.map(c => ({
+          numeroCuota: c.numeroCuota,
+          montoCuotaOriginal: c.montoCuota,
+          montoCuota: c.montoCuota,
+          fechaCobro: formatoFecha(c.fechaCobro)
+        })));
+      } else {
+        setCuotasEditadas([]);
+      }
+      setCuotasNuevas([]);
       setActiveTab('generales');
       setAlert({ show: false, message: '', variant: 'danger' });
     }
@@ -64,20 +80,34 @@ export const ModalEditarVenta = ({ show, onHide, venta, usuario, onRefresh }) =>
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
+    setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
 
   const handleGaranteChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      garante: { ...prev.garante, [name]: value }
-    }));
+    setFormData(prev => ({ ...prev, garante: { ...prev.garante, [name]: value } }));
   };
 
+  // --- Manejo de Cuotas ---
+  const handleCuotaChange = (index, value) => {
+    const nuevas = [...cuotasEditadas];
+    nuevas[index].montoCuota = value;
+    setCuotasEditadas(nuevas);
+  };
+
+  const agregarCuotaNueva = () => {
+    setCuotasNuevas(prev => [...prev, { montoCuota: 0, fechaCobro: '' }]);
+  };
+  const handleNuevaCuotaChange = (index, field, value) => {
+    const nuevas = [...cuotasNuevas];
+    nuevas[index][field] = value;
+    setCuotasNuevas(nuevas);
+  };
+  const eliminarCuotaNueva = (index) => {
+    setCuotasNuevas(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // --- Manejo de Pagos ---
   const handlePagoChange = (i, field, value) => {
     const nuevos = [...formData.pagos];
     nuevos[i] = { ...nuevos[i], [field]: value };
@@ -86,6 +116,7 @@ export const ModalEditarVenta = ({ show, onHide, venta, usuario, onRefresh }) =>
   const agregarPago = () => setFormData(prev => ({ ...prev, pagos: [...prev.pagos, { monto: 0, metodo: 'efectivo', notas: [] }] }));
   const eliminarPago = (i) => setFormData(prev => ({ ...prev, pagos: prev.pagos.filter((_, idx) => idx !== i) }));
 
+  // --- Manejo de Descuentos ---
   const handleDescuentoChange = (i, field, value) => {
     const nuevos = [...formData.descuentos];
     nuevos[i] = { ...nuevos[i], [field]: value };
@@ -94,10 +125,17 @@ export const ModalEditarVenta = ({ show, onHide, venta, usuario, onRefresh }) =>
   const agregarDescuento = () => setFormData(prev => ({ ...prev, descuentos: [...prev.descuentos, { monto: 0, descripcion: '' }] }));
   const eliminarDescuento = (i) => setFormData(prev => ({ ...prev, descuentos: prev.descuentos.filter((_, idx) => idx !== i) }));
 
+  // --- Submit ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
+      // 1. Filtrar cuotas editadas
+      const cuotasConCambios = cuotasEditadas
+        .filter(c => c.montoCuota !== c.montoCuotaOriginal)
+        .map(c => ({ numeroCuota: c.numeroCuota, montoCuota: parseFloat(c.montoCuota) }));
+
+      // 2. Armar payload base
       const payload = {
         localidad: formData.localidad,
         fechaRealizada: formData.fechaRealizada,
@@ -118,8 +156,21 @@ export const ModalEditarVenta = ({ show, onHide, venta, usuario, onRefresh }) =>
         }))
       };
 
+      if (cuotasConCambios.length > 0) {
+        payload.cuotas = cuotasConCambios;
+      }
+
+      // 3. Ejecutar edición base
       await editarVenta(venta._id, payload);
-      
+
+      // 4. Si hay cuotas nuevas, llamar al endpoint de agregar
+      if (cuotasNuevas.length > 0) {
+        const nuevasValidas = cuotasNuevas.filter(c => parseFloat(c.montoCuota) > 0);
+        if (nuevasValidas.length > 0) {
+          await agregarCuotasVenta(venta._id, nuevasValidas, usuario);
+        }
+      }
+
       showAlert('Venta actualizada exitosamente', 'success');
       setTimeout(() => {
         onHide();
@@ -171,7 +222,7 @@ export const ModalEditarVenta = ({ show, onHide, venta, usuario, onRefresh }) =>
           </Alert>
         )}
 
-        {/* Resumen de la Venta (Contexto) */}
+        {/* Contexto */}
         <div className="rounded-3 p-3 mb-4" style={{ backgroundColor: COLORS.bgGeneral, border: `1px solid ${COLORS.bordes}` }}>
           <div className="d-flex align-items-center gap-3">
             <div className="d-flex align-items-center justify-content-center rounded-circle"
@@ -179,9 +230,7 @@ export const ModalEditarVenta = ({ show, onHide, venta, usuario, onRefresh }) =>
               {venta.cliente?.nombre?.charAt(0)}{venta.cliente?.apellido?.charAt(0)}
             </div>
             <div>
-              <strong style={{ color: COLORS.textoPrincipal, fontSize: '1rem' }}>
-                {venta.cliente?.apellido}, {venta.cliente?.nombre}
-              </strong>
+              <strong style={{ color: COLORS.textoPrincipal, fontSize: '1rem' }}>{venta.cliente?.apellido}, {venta.cliente?.nombre}</strong>
               <div className="small" style={{ color: COLORS.textoSecundario }}>
                 <i className="bi bi-phone me-1"></i>{venta.producto?.nombre} {venta.producto?.modelo} · Contrato {venta.numeroContrato || '-'}
               </div>
@@ -194,6 +243,9 @@ export const ModalEditarVenta = ({ show, onHide, venta, usuario, onRefresh }) =>
             <Nav variant="pills" className="mb-3 flex-wrap gap-2">
               {[
                 { key: 'generales', label: 'Generales', icon: 'info-circle' },
+                ...(venta.tieneCuotas || venta.tipoVenta === 'sistema1' || venta.tipoVenta === 'sistema2' || venta.tipoVenta === 'plan_canje_cuotas'
+                  ? [{ key: 'cuotas', label: `Cuotas (${cuotasEditadas.length + cuotasNuevas.length})`, icon: 'grid' }]
+                  : []),
                 { key: 'pagos', label: `Pagos (${formData.pagos.length})`, icon: 'wallet2' },
                 { key: 'descuentos', label: `Descuentos (${formData.descuentos.length})`, icon: 'tag' },
                 ...(venta.requiereGarante && formData.garante?.nombre ? [{ key: 'garante', label: 'Garante', icon: 'person-check' }] : []),
@@ -221,50 +273,117 @@ export const ModalEditarVenta = ({ show, onHide, venta, usuario, onRefresh }) =>
                   </h6>
                   <Row className="g-3">
                     <Col md={6}>
-                      <Form.Label className="small fw-semibold" style={{ color: COLORS.textoSecundario }}>
-                        <i className="bi bi-geo-alt me-1"></i>Localidad
-                      </Form.Label>
-                      <Form.Select name="localidad" value={formData.localidad} onChange={handleChange}
-                        className="rounded-3" disabled={loading}>
+                      <Form.Label className="small fw-semibold" style={{ color: COLORS.textoSecundario }}><i className="bi bi-geo-alt me-1"></i>Localidad</Form.Label>
+                      <Form.Select name="localidad" value={formData.localidad} onChange={handleChange} className="rounded-3" disabled={loading}>
                         <option value="">Seleccionar localidad</option>
                         {LOCALIDADES.map(loc => <option key={loc} value={loc}>{loc.charAt(0).toUpperCase() + loc.slice(1)}</option>)}
                       </Form.Select>
                     </Col>
                     <Col md={6}>
-                      <Form.Label className="small fw-semibold" style={{ color: COLORS.textoSecundario }}>
-                        <i className="bi bi-person-badge me-1"></i>Vendedor
-                      </Form.Label>
+                      <Form.Label className="small fw-semibold" style={{ color: COLORS.textoSecundario }}><i className="bi bi-person-badge me-1"></i>Vendedor</Form.Label>
                       <Form.Control name="vendedor" value={formData.vendedor} onChange={handleChange} className="rounded-3" />
                     </Col>
                     <Col md={6}>
-                      <Form.Label className="small fw-semibold" style={{ color: COLORS.textoSecundario }}>
-                        <i className="bi bi-calendar me-1"></i>Fecha Realizada
-                      </Form.Label>
+                      <Form.Label className="small fw-semibold" style={{ color: COLORS.textoSecundario }}><i className="bi bi-calendar me-1"></i>Fecha Realizada</Form.Label>
                       <Form.Control type="date" name="fechaRealizada" value={formData.fechaRealizada} onChange={handleChange} className="rounded-3" />
                     </Col>
                     <Col md={6}>
-                      <Form.Label className="small fw-semibold" style={{ color: COLORS.textoSecundario }}>
-                        <i className="bi bi-calendar-check me-1"></i>Fecha Entrega
-                      </Form.Label>
+                      <Form.Label className="small fw-semibold" style={{ color: COLORS.textoSecundario }}><i className="bi bi-calendar-check me-1"></i>Fecha Entrega</Form.Label>
                       <Form.Control type="date" name="fechaEntrega" value={formData.fechaEntrega} onChange={handleChange} className="rounded-3" disabled={!venta.fechaEntrega} />
                     </Col>
                     <Col md={6}>
-                      <Form.Label className="small fw-semibold" style={{ color: COLORS.textoSecundario }}>
-                        <i className="bi bi-flag me-1"></i>Conducta de Pago
-                      </Form.Label>
+                      <Form.Label className="small fw-semibold" style={{ color: COLORS.textoSecundario }}><i className="bi bi-flag me-1"></i>Conducta de Pago</Form.Label>
                       <Form.Select name="conducta_pago" value={formData.conducta_pago} onChange={handleChange} className="rounded-3">
                         {conductas.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                       </Form.Select>
                     </Col>
                     <Col md={6}>
-                      <Form.Label className="small fw-semibold" style={{ color: COLORS.textoSecundario }}>
-                        <i className="bi bi-toggle-on me-1"></i>Estado
-                      </Form.Label>
+                      <Form.Label className="small fw-semibold" style={{ color: COLORS.textoSecundario }}><i className="bi bi-toggle-on me-1"></i>Estado</Form.Label>
                       <Form.Check type="switch" id="estado-switch" label={formData.estado ? 'Activa' : 'Inactiva'} checked={formData.estado} onChange={handleChange} name="estado" />
                     </Col>
                   </Row>
                 </div>
               </Tab.Pane>
+
+              {/* TAB CUOTAS */}
+              {(venta.tieneCuotas || venta.tipoVenta === 'sistema1' || venta.tipoVenta === 'sistema2' || venta.tipoVenta === 'plan_canje_cuotas') && (
+                <Tab.Pane eventKey="cuotas">
+                  <div className="rounded-3 p-3" style={{ backgroundColor: COLORS.bgGeneral, border: `1px solid ${COLORS.bordes}` }}>
+                    <h6 className="fw-bold mb-3" style={{ fontSize: '0.85rem', color: COLORS.azul }}>
+                      <i className="bi bi-grid me-2"></i>Gestión de Cuotas
+                    </h6>
+
+                    <div className="mb-4">
+                      <small className="d-block mb-2 fw-semibold" style={{ color: COLORS.textoSecundario }}>Cuotas Existentes</small>
+                      {cuotasEditadas.length === 0 && <div className="text-muted small">No hay cuotas registradas.</div>}
+                      {cuotasEditadas.length > 0 && (
+                        <div className="table-responsive rounded-3" style={{ border: `1px solid ${COLORS.bordes}` }}>
+                          <Table size="sm" className="mb-0 align-middle" style={{ fontSize: '0.85rem' }}>
+                            <thead style={{ backgroundColor: COLORS.cardBg }}>
+                              <tr>
+                                <th style={{ padding: '12px' }}>#</th>
+                                <th style={{ padding: '12px' }}>Vencimiento</th>
+                                <th style={{ padding: '12px' }}>Monto Original</th>
+                                <th style={{ padding: '12px' }}>Nuevo Monto</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {cuotasEditadas.map((c, i) => (
+                                <tr key={i} style={{ borderBottom: `1px solid ${COLORS.bordes}` }}>
+                                  <td className="fw-semibold" style={{ padding: '8px 12px' }}>#{c.numeroCuota}</td>
+                                  <td style={{ padding: '8px 12px', color: COLORS.textoSecundario }}>{c.fechaCobro || '-'}</td>
+                                  <td style={{ padding: '8px 12px', color: COLORS.textoSecundario }}>${c.montoCuotaOriginal.toLocaleString('es-AR')}</td>
+                                  <td style={{ padding: '8px 12px' }}>
+                                    <Form.Control
+                                      type="number"
+                                      value={c.montoCuota}
+                                      onChange={(e) => handleCuotaChange(i, e.target.value)}
+                                      className="rounded-3"
+                                      size="sm"
+                                      style={{ width: '120px' }}
+                                    />
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </Table>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="pt-3" style={{ borderTop: `1px solid ${COLORS.bordes}` }}>
+                      <div className="d-flex justify-content-between align-items-center mb-2">
+                        <small className="fw-semibold" style={{ color: COLORS.verde }}>
+                          <i className="bi bi-plus-circle me-1"></i>Agregar Cuotas Nuevas
+                        </small>
+                        <Button variant="outline-success" size="sm" className="rounded-3" onClick={agregarCuotaNueva} style={{ borderColor: COLORS.verde, color: COLORS.verde }}>
+                          <i className="bi bi-plus-lg me-1"></i>Agregar Cuota
+                        </Button>
+                      </div>
+                      {cuotasNuevas.length === 0 && (
+                        <div className="small text-muted">No has agregado nuevas cuotas aún.</div>
+                      )}
+                      {cuotasNuevas.map((c, i) => (
+                        <Row key={i} className="g-2 mb-2 align-items-end">
+                          <Col md={5}>
+                            <Form.Label className="small" style={{ color: COLORS.textoSecundario }}>Monto ($)</Form.Label>
+                            <Form.Control type="number" value={c.montoCuota} onChange={(e) => handleNuevaCuotaChange(i, 'montoCuota', e.target.value)} className="rounded-3" placeholder="Ej: 50000" />
+                          </Col>
+                          <Col md={5}>
+                            <Form.Label className="small" style={{ color: COLORS.textoSecundario }}>Fecha de Cobro (Opcional)</Form.Label>
+                            <Form.Control type="date" value={c.fechaCobro} onChange={(e) => handleNuevaCuotaChange(i, 'fechaCobro', e.target.value)} className="rounded-3" />
+                          </Col>
+                          <Col md={2}>
+                            <Button variant="outline-danger" size="sm" className="rounded-3 w-100" onClick={() => eliminarCuotaNueva(i)} style={{ borderColor: COLORS.rojo, color: COLORS.rojo }}>
+                              <i className="bi bi-trash3"></i>
+                            </Button>
+                          </Col>
+                        </Row>
+                      ))}
+                    </div>
+                  </div>
+                </Tab.Pane>
+              )}
 
               {/* TAB PAGOS */}
               <Tab.Pane eventKey="pagos">

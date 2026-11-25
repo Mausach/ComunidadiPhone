@@ -4,12 +4,11 @@ import { Navigate, useLocation } from 'react-router-dom';
 
 
 // Importamos los componentes de otras páginas
-
-
 import { Ventas } from '../Ventas/Ventas';
 import { CobranzaV2 } from '../Cobranza/CobranzaV2';
 import { EquiposUnificados } from '../Ger_Comercial/Componentedos/EquiposUnificadosV2';
 import { NavBarAdmin } from './Componentes/NavBarAdmin';
+import { ControlGastos } from '../Ceo/Componentes/ControlGastos';
 
 
 
@@ -38,6 +37,8 @@ export const Admin = () => {
         return <Ventas mostrarNavbar={false} />;
       case 'cobranza':
         return <CobranzaV2 mostrarNavbar={false} />;
+      case 'gastos':
+        return <ControlGastos mostrarNavbar={false} />;  
       case 'stock':
         return <EquiposUnificados />;
       default:

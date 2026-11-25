@@ -64,6 +64,10 @@ export const ModalDetalleVenta = ({ show, onHide, venta }) => {
   const porcentaje = venta.cuotasResumen?.porcentajeCobrado || 0;
   const saldoPendiente = (venta.montoTotal || 0) - (venta.montoPagado || 0);
 
+  // 👇 CORRECCIÓN: Condición ampliada para mostrar cuotas
+  const tieneCuotas = (venta.cuotas && venta.cuotas.length > 0) ||
+    ['sistema1', 'sistema2', 'plan_canje_cuotas'].includes(venta.tipoVenta);
+
   return (
     <Modal show={show} onHide={onHide} size="xl" centered scrollable>
       <Modal.Header closeButton className="border-0 pb-0 pt-4 px-4">
@@ -114,7 +118,7 @@ export const ModalDetalleVenta = ({ show, onHide, venta }) => {
             </Col>
           </Row>
 
-          {venta.tieneCuotas && (
+          {tieneCuotas && (
             <div className="mt-3">
               <div className="d-flex justify-content-between mb-1">
                 <small style={{ color: COLORS.textoSecundario }}>
@@ -136,7 +140,8 @@ export const ModalDetalleVenta = ({ show, onHide, venta }) => {
             {[
               { key: 'general', label: 'General', icon: 'info-circle' },
               { key: 'producto', label: 'Producto', icon: 'phone' },
-              ...(venta.tieneCuotas ? [{ key: 'cuotas', label: `Cuotas (${venta.cuotas?.length || 0})`, icon: 'grid' }] : []),
+              // 👇 CORRECCIÓN: usar la nueva variable tieneCuotas
+              ...(tieneCuotas ? [{ key: 'cuotas', label: `Cuotas (${venta.cuotas?.length || 0})`, icon: 'grid' }] : []),
               ...(venta.pagos && venta.pagos.length > 0 ? [{ key: 'pagos', label: `Pagos (${venta.pagos.length})`, icon: 'wallet2' }] : []),
               ...(venta.descuentos && venta.descuentos.length > 0 ? [{ key: 'descuentos', label: `Descuentos (${venta.descuentos.length})`, icon: 'tag' }] : []),
               ...(venta.requiereGarante && venta.garante ? [{ key: 'garante', label: 'Garante', icon: 'person-check' }] : []),
@@ -258,7 +263,7 @@ export const ModalDetalleVenta = ({ show, onHide, venta }) => {
             </Tab.Pane>
 
             {/* TAB CUOTAS */}
-            {venta.tieneCuotas && (
+            {tieneCuotas && (
               <Tab.Pane eventKey="cuotas">
                 <div className="rounded-3" style={{ backgroundColor: COLORS.bgGeneral, border: `1px solid ${COLORS.bordes}` }}>
                   <div className="table-responsive">

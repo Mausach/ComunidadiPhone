@@ -11,6 +11,7 @@ export const NavBarAdmin = ({ usuario, vistaActiva, onCambiarVista }) => {
   const opciones = [
     { label: 'Ventas', icon: 'cart-plus', vista: 'ventas' },
     { label: 'Cobranza', icon: 'cash-stack', vista: 'cobranza' },
+    { label: 'Gastos', icon: 'receipt', vista: 'gastos' },
     { label: 'Stock', icon: 'box-seam', vista: 'stock' },
   ];
 
@@ -107,7 +108,7 @@ export const NavBarAdmin = ({ usuario, vistaActiva, onCambiarVista }) => {
                       {usuario?.nombre} {usuario?.apellido}
                     </span>
                     <small style={{ color: COLORS.textoSecundario, fontSize: '0.7rem' }}>
-                      Ger. Comercial
+                      Administracion
                     </small>
                   </div>
                   <i className="bi bi-chevron-down d-none d-md-block" style={{ color: COLORS.textoSecundario, fontSize: '0.7rem' }}></i>

@@ -21,3 +21,27 @@ export const editarVenta = async (ventaId, payload) => {
     throw new Error(error.response?.data?.message || error.message || 'Error al editar la venta');
   }
 };
+
+export const agregarCuotasVenta = async (ventaId, cuotasNuevas, usuario) => {
+  try {
+    const resp = await authApi.post(`/vtas/agg/${ventaId}/agregar-cuotas`, {
+      cuotasNuevas: cuotasNuevas.map(c => ({
+        montoCuota: parseFloat(c.montoCuota),
+        fechaCobro: c.fechaCobro || undefined
+      })),
+      usuario: { nombre: usuario?.nombre || 'Sistema' }
+    });
+
+    if (resp.data?.ok) {
+      return {
+        success: true,
+        message: resp.data.message || 'Cuotas agregadas',
+        data: resp.data.data
+      };
+    }
+    throw new Error(resp.data?.message || 'Error al agregar cuotas');
+  } catch (error) {
+    console.error('❌ Error en agregarCuotasVenta:', error);
+    throw new Error(error.response?.data?.message || error.message || 'Error al agregar cuotas');
+  }
+};

@@ -108,7 +108,7 @@ export const NavBarGC = ({ usuario, vistaActiva, onCambiarVista }) => {
                       {usuario?.nombre} {usuario?.apellido}
                     </span>
                     <small style={{ color: COLORS.textoSecundario, fontSize: '0.7rem' }}>
-                      Ger. Comercial
+                      CEO
                     </small>
                   </div>
                   <i className="bi bi-chevron-down d-none d-md-block" style={{ color: COLORS.textoSecundario, fontSize: '0.7rem' }}></i>
